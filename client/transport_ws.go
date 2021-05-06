@@ -107,10 +107,14 @@ func (r wsResponse) Err() error {
 	return r.err
 }
 
+type NewWebsocketConnFunc func(ctx context.Context, URL string) (WebsocketConn, error)
+
 type WsTransport struct {
-	ConnOptions
+	Context          context.Context
+	URL              string
 	ConnectionParams interface{}
-	NewWebsocketConn func(o ConnOptions) (WebsocketConn, error)
+	NewWebsocketConn NewWebsocketConnFunc
+	Timeout          time.Duration
 	RetryTimeout     time.Duration
 
 	conn        WebsocketConn
@@ -427,7 +431,7 @@ func (t *WsTransport) init() error {
 	t.cancel = cancel
 
 	if t.NewWebsocketConn == nil {
-		t.NewWebsocketConn = NewWebsocketConn()
+		t.NewWebsocketConn = NewWebsocketConn(t.Timeout)
 	}
 
 	for {
@@ -435,7 +439,7 @@ func (t *WsTransport) init() error {
 		var conn WebsocketConn
 		// allow custom websocket client
 		if t.conn == nil {
-			conn, err = t.NewWebsocketConn(t.ConnOptions)
+			conn, err = t.NewWebsocketConn(ctx, t.URL)
 			if err == nil {
 				t.conn = conn
 			}
@@ -454,7 +458,7 @@ func (t *WsTransport) init() error {
 		}
 
 		t.printLog(GQL_INTERNAL, err.Error()+". retry in second....")
-		time.Sleep(time.Second)
+		time.Sleep(t.RetryTimeout)
 	}
 }
 

@@ -39,7 +39,11 @@ type HttpTransport struct {
 	RequestOptions []HttpRequestOption
 }
 
-func (h HttpTransport) Request(o Request) (Response, error) {
+func (h *HttpTransport) Request(o Request) (Response, error) {
+	if h.Client == nil {
+		h.Client = http.DefaultClient
+	}
+
 	body := OperationRequest{
 		Query:         o.Query,
 		OperationName: o.OperationName,

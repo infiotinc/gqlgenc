@@ -29,43 +29,39 @@ Quickstart with a client with http & ws transports:
 package main
 
 import (
-	"context"
-	"github.com/infiotinc/gqlgenc/client"
-	"github.com/vektah/gqlparser/v2/ast"
-	"net/http"
-	"time"
+    "context"
+    "github.com/infiotinc/gqlgenc/client"
+    "github.com/vektah/gqlparser/v2/ast"
+    "time"
 )
 
 func main() {
-	ctx := context.Background()
+    ctx := context.Background()
 
-	wstr := &client.WsTransport{
-		ConnOptions: client.ConnOptions{
-			Context: ctx,
-			URL:     "http://example.org/graphql",
-			Timeout: time.Minute,
-		},
-		RetryTimeout: time.Second,
-	}
-	wstr.Start()
-	defer wstr.Close()
+    wstr := &client.WsTransport{
+        Context: ctx,
+        URL:     "ws://example.org/graphql",
+        Timeout: time.Minute,
+        RetryTimeout: time.Second,
+    }
+    wstr.Start()
+    defer wstr.Close()
 
-	httptr := &client.HttpTransport{
-		Client: http.DefaultClient,
-		URL:    "ws://example.org/graphql",
-	}
+    httptr := &client.HttpTransport{
+        URL:    "http://example.org/graphql",
+    }
 
-	tr := client.SplitTransport(func(req client.Request) (client.Transport, error) {
-		if req.OperationType == ast.Subscription {
-			return wstr, nil
-		}
+    tr := client.SplitTransport(func(req client.Request) (client.Transport, error) {
+        if req.OperationType == ast.Subscription {
+            return wstr, nil
+        }
 
-		return httptr, nil
-	})
+        return httptr, nil
+    })
 
-	cli := &client.Client {
-		Transport: tr,
-	}
+    cli := &client.Client {
+        Transport: tr,
+    }
 }
 ```
 
@@ -73,11 +69,11 @@ func main() {
 
 ```go
 var res struct {
-	Room string `json:"room"`
+    Room string `json:"room"`
 }
 err := cli.Query(ctx, "query { room }", nil, &res)
 if err != nil {
-	panic(err)
+    panic(err)
 }
 ```
 
@@ -86,27 +82,27 @@ if err != nil {
 ```go
 sub, err := cli.Subscription(ctx, "subscription { newRoom }", nil)
 if err != nil {
-	panic(err)
+    panic(err)
 }
 
 for sub.Next() {
-	msg := sub.Get()
-	
-	if len(msg.Errors) > 0 {
-		// Do something with them
-	}
-	
-	var res struct {
-		Room string `json:"newRoom"`
-	}
-	err := msg.UnmarshalData(&res)
-	if err != nil {
-		// Do something with that
-	}
+    msg := sub.Get()
+    
+    if len(msg.Errors) > 0 {
+        // Do something with them
+    }
+    
+    var res struct {
+        Room string `json:"newRoom"`
+    }
+    err := msg.UnmarshalData(&res)
+    if err != nil {
+        // Do something with that
+    }
 }
 
 if err := sub.Err(); err != nil {
-	panic(err)
+    panic(err)
 }
 ```
 
@@ -153,9 +149,9 @@ Enjoy:
 ```go
 // Create codegen client
 gql := &graph.Client{
-	Client: cli,
+    Client: cli,
 }
 
-gql.YourAmazingQuery(...)
+gql.GetRoom(...)
 ```
 

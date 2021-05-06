@@ -56,11 +56,9 @@ func wstr(ctx context.Context, u string) *client.WsTransport {
 	}
 
 	tr := &client.WsTransport{
-		ConnOptions: client.ConnOptions{
-			Context: ctx,
-			URL:     u,
-			Timeout: time.Minute,
-		},
+		Context:      ctx,
+		URL:          u,
+		Timeout:      time.Minute,
 		RetryTimeout: time.Second,
 	}
 	tr.Start()
@@ -70,7 +68,6 @@ func wstr(ctx context.Context, u string) *client.WsTransport {
 
 func httptr(ctx context.Context, u string) *client.HttpTransport {
 	tr := &client.HttpTransport{
-		Client: http.DefaultClient,
 		URL:    u,
 	}
 

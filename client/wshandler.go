@@ -33,10 +33,10 @@ func (wh *websocketHandler) Close() error {
 	return wh.Conn.Close(websocket.StatusNormalClosure, "close websocket")
 }
 
-type WebsocketOption func(o *websocket.DialOptions)
+type WsDialOption func(o *websocket.DialOptions)
 
-func NewWebsocketConn(optionfs ...WebsocketOption) func(o ConnOptions) (WebsocketConn, error) {
-	return func(o ConnOptions) (WebsocketConn, error) {
+func NewWebsocketConn(timeout time.Duration, optionfs ...WsDialOption) NewWebsocketConnFunc {
+	return func(ctx context.Context, URL string) (WebsocketConn, error) {
 		options := &websocket.DialOptions{
 			Subprotocols: []string{"graphql-ws"},
 		}
@@ -44,15 +44,15 @@ func NewWebsocketConn(optionfs ...WebsocketOption) func(o ConnOptions) (Websocke
 			f(options)
 		}
 
-		c, _, err := websocket.Dial(o.Context, o.URL, options)
+		c, _, err := websocket.Dial(ctx, URL, options)
 		if err != nil {
 			return nil, err
 		}
 
 		return &websocketHandler{
-			ctx:     o.Context,
+			ctx:     ctx,
 			Conn:    c,
-			timeout: o.Timeout,
+			timeout: timeout,
 		}, nil
 	}
 }
