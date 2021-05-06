@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"io"
 	"nhooyr.io/websocket"
 	"os"
@@ -152,9 +153,9 @@ func (t *WsTransport) setIsRunning(value bool) {
 }
 
 func (t *WsTransport) Run() error {
-	t.printLog(GQL_INTERNAL, "RUN")
-
 	t.initStruct()
+
+	t.printLog(GQL_INTERNAL, "RUN")
 
 	if err := t.init(); err != nil {
 		return fmt.Errorf("retry timeout. exiting...")
@@ -201,6 +202,7 @@ func (t *WsTransport) Run() error {
 				t.printLog(GQL_DATA, message)
 
 				id := message.ID
+				t.operationsm.Lock()
 				sub, ok := t.operations[id]
 				if !ok {
 					continue
@@ -209,9 +211,10 @@ func (t *WsTransport) Run() error {
 				var out OperationResponse
 				err := json.Unmarshal(message.Payload, &out)
 				if err != nil {
-					out.Error = err
+					out.Errors = gqlerror.List{gqlerror.WrapPath(nil, err)}
 				}
 				sub.ch <- out
+				t.operationsm.Unlock()
 			case GQL_CONNECTION_ERROR:
 				t.printLog(GQL_CONNECTION_ERROR, message)
 			case GQL_COMPLETE:
@@ -346,9 +349,8 @@ func (t *WsTransport) unsubscribe(id string) error {
 
 	err := t.stopSubscription(id)
 
-	close(res.ch)
-
 	delete(t.operations, id)
+	close(res.ch)
 	t.operationsm.Unlock()
 	return err
 }
@@ -368,9 +370,9 @@ func (t *WsTransport) terminate() error {
 }
 
 func (t *WsTransport) Request(req Request) (Response, error) {
-	t.printLog(GQL_INTERNAL, "REQ")
-
 	t.initStruct()
+
+	t.printLog(GQL_INTERNAL, "REQ")
 
 	id := fmt.Sprintf("%p-%v", &req, time.Now().Nanosecond())
 

@@ -44,13 +44,18 @@ func (c *Client) Query(ctx context.Context, query string, variables map[string]i
 		return fmt.Errorf("no response")
 	}
 
-	opres := res.Get()
-	err = opres.UnmarshalData(t)
-	if err != nil {
+	if err := res.Err(); err != nil {
 		return err
 	}
 
-	return res.Err()
+	opres := res.Get()
+	err = opres.UnmarshalData(t)
+
+	if len(opres.Errors) > 0 {
+		return opres.Errors
+	}
+
+	return err
 }
 
 func (c *Client) Subscription(ctx context.Context, query string, variables map[string]interface{}) (Response, error) {

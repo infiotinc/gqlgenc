@@ -77,8 +77,14 @@ func (c *Client) SubscribeMessageAdded(ctx context.Context) (chan MessageSubscri
 			res := sub.Get()
 
 			var datares MessageSubscribeMessageAdded
-			err := res.UnmarshalData(&datares)
-			datares.Error = err
+			if len(res.Errors) > 0 {
+				datares.Error = res.Errors
+			}
+
+			err := res.UnmarshalData(&datares.Data)
+			if datares.Error == nil && err != nil {
+				datares.Error = err
+			}
 
 			ch <- datares
 		}

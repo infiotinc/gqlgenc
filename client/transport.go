@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/vektah/gqlparser/v2/ast"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 type OperationRequest struct {
@@ -13,8 +14,7 @@ type OperationRequest struct {
 }
 
 type OperationResponse struct {
-	Error  error            `json:"-"`
-	Errors []string         `json:"errors,omitempty"`
+	Errors gqlerror.List    `json:"errors,omitempty"`
 	Data   *json.RawMessage `json:"data,omitempty"`
 }
 
@@ -27,7 +27,7 @@ func (r OperationResponse) UnmarshalData(t interface{}) error {
 }
 
 type Request struct {
-	Context context.Context
+	Context       context.Context
 	OperationType ast.Operation
 	OperationName string
 

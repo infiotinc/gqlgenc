@@ -65,9 +65,15 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                     for sub.Next() {
                         res := sub.Get()
 
-                        var datares Message{{ $model.Name|go }}
-                        err := res.UnmarshalData(&datares)
-                        datares.Error = err
+                        var datares MessageSubscribeMessageAdded
+                        if len(res.Errors) > 0 {
+                            datares.Error = res.Errors
+                        }
+
+                        err := res.UnmarshalData(&datares.Data)
+                        if datares.Error == nil && err != nil {
+                            datares.Error = err
+                        }
 
                         ch <- datares
                     }
