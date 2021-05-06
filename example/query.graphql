@@ -1,0 +1,11 @@
+query GetRoom {
+    room(name: "test") {
+        name
+    }
+}
+
+subscription SubscribeMessageAdded {
+    messageAdded(roomName: "test") {
+        id
+    }
+}

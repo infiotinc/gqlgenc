@@ -1,0 +1,101 @@
+{{- if .GenerateClient }}
+	{{ reserveImport "bytes" }}
+	{{ reserveImport "context" }}
+	{{ reserveImport "encoding/json" }}
+	{{ reserveImport "fmt" }}
+	{{ reserveImport "io" }}
+	{{ reserveImport "io/ioutil" }}
+	{{ reserveImport "net/http" }}
+	{{ reserveImport "net/url" }}
+	{{ reserveImport "path" }}
+	{{ reserveImport "time" }}
+
+
+	{{ reserveImport "github.com/infiotinc/gqlgenc/client" }}
+
+	type Client struct {
+	    Client *client.Client
+	}
+{{- end }}
+
+type {{ .Query.Name | go }} {{ .Query.Type | ref }}
+
+{{- if .Mutation }}
+	type {{ .Mutation.Name | go }} {{ .Mutation.Type | ref }}
+{{- end }}
+
+{{- if .Subscription }}
+	type {{ .Subscription.Name | go }} {{ .Subscription.Type | ref }}
+{{- end }}
+
+{{- range $name, $element := .Fragment }}
+	type  {{ .Name | go  }} {{ .Type | ref }}
+{{- end }}
+
+{{- range $name, $element := .OperationResponse }}
+	type  {{ .Name | go  }} {{ .Type | ref }}
+{{- end }}
+
+{{- range $model := .Operation }}
+	const {{ $model.Name|go }}Document = `{{ $model.Operation }}`
+
+	{{- if $.GenerateClient }}
+        {{- if eq $model.OperationType "subscription" }}
+            type Message{{ $model.Name|go }} struct {
+                Data  *{{ $model.ResponseStructName | go }}
+                Error error
+            }
+
+            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (chan Message{{ $model.Name|go }}, error) {
+                vars := map[string]interface{}{
+                {{- range $args := .VariableDefinitions}}
+                    "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
+                {{- end }}
+                }
+
+
+                sub, err := c.Client.Subscription(ctx, {{ $model.Name|go }}Document, vars)
+                if err != nil {
+            		return nil, err
+                }
+
+                ch := make(chan Message{{ $model.Name|go }})
+
+                go func() {
+                    for sub.Next() {
+                        res := sub.Get()
+
+                        var datares Message{{ $model.Name|go }}
+                        err := res.UnmarshalData(&datares)
+                        datares.Error = err
+
+                        ch <- datares
+                    }
+                    if err := sub.Err(); err != nil {
+                        ch <- Message{{ $model.Name|go }} {
+                            Error: err,
+                        }
+                    }
+                    close(ch)
+                }()
+
+                return ch, nil
+            }
+        {{- else}}
+            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $model.ResponseStructName | go }}, error) {
+                vars := map[string]interface{}{
+                {{- range $args := .VariableDefinitions}}
+                    "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
+                {{- end }}
+                }
+
+                var res {{ $model.ResponseStructName | go }}
+                if err := c.Client.Query(ctx, {{ $model.Name|go }}Document, vars, &res); err != nil {
+                    return nil, err
+                }
+
+                return &res, nil
+            }
+        {{- end}}
+	{{- end}}
+{{- end}}
