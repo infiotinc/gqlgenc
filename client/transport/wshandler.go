@@ -1,4 +1,4 @@
-package client
+package transport
 
 // Original work from https://github.com/hasura/go-graphql-client/blob/0806e5ec7/subscription.go
 

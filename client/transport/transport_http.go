@@ -1,4 +1,4 @@
-package client
+package transport
 
 import (
 	"bytes"
@@ -33,14 +33,14 @@ func (r httpResponse) Err() error {
 
 type HttpRequestOption func(req *http.Request)
 
-type HttpTransport struct {
+type Http struct {
 	URL            string
 	// Client defaults to http.DefaultClient
 	Client         *http.Client
 	RequestOptions []HttpRequestOption
 }
 
-func (h *HttpTransport) Request(o Request) (Response, error) {
+func (h *Http) Request(o Request) (Response, error) {
 	if h.Client == nil {
 		h.Client = http.DefaultClient
 	}

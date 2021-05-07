@@ -1,9 +1,17 @@
-package client
+package transport
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/vektah/gqlparser/v2/gqlerror"
+)
+
+type Operation string
+
+const (
+	Query        Operation = "query"
+	Mutation     Operation = "mutation"
+	Subscription Operation = "subscription"
 )
 
 type OperationRequest struct {

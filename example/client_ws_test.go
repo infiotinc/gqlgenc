@@ -3,12 +3,13 @@ package example
 import (
 	"context"
 	"github.com/infiotinc/gqlgenc/client"
+	"github.com/infiotinc/gqlgenc/client/transport"
 	"net/http/httptest"
 	"testing"
 )
 
 func wscli(ctx context.Context) (*client.Client, func()) {
-	return clifactory(ctx, func(ts *httptest.Server) (client.Transport, func()) {
+	return clifactory(ctx, func(ts *httptest.Server) (transport.Transport, func()) {
 		tr := wstr(ctx, ts.URL)
 
 		return tr, func() {

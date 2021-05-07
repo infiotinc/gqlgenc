@@ -3,6 +3,7 @@ package example
 import (
 	"context"
 	"github.com/infiotinc/gqlgenc/client"
+	"github.com/infiotinc/gqlgenc/client/transport"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -10,8 +11,8 @@ import (
 
 type splitStats map[string]int
 
-func (ss splitStats) wrapTr(name string, tr client.Transport) client.Transport {
-	return client.FuncTransport(func(req client.Request) (client.Response, error) {
+func (ss splitStats) wrapTr(name string, tr transport.Transport) transport.Transport {
+	return transport.Func(func(req transport.Request) (transport.Response, error) {
 		if _, ok := ss[name]; !ok {
 			ss[name] = 0
 		}
@@ -33,14 +34,14 @@ func (ss splitStats) get(name string) int {
 func splitcli(ctx context.Context) (*client.Client, func(), *splitStats) {
 	ss := &splitStats{}
 
-	c, td := clifactory(ctx, func(ts *httptest.Server) (client.Transport, func()) {
+	c, td := clifactory(ctx, func(ts *httptest.Server) (transport.Transport, func()) {
 		wstr := wstr(ctx, ts.URL)
 		httptr := httptr(ctx, ts.URL)
 
 		s_wstr := ss.wrapTr("ws", wstr)
 		s_httptr := ss.wrapTr("http", httptr)
 
-		tr := client.SplitSubscription(s_wstr, s_httptr)
+		tr := transport.SplitSubscription(s_wstr, s_httptr)
 
 		return tr, func() {
 			wstr.Close()

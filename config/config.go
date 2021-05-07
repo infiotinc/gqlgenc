@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/infiotinc/gqlgenc/client"
+	"github.com/infiotinc/gqlgenc/client/transport"
 	"github.com/infiotinc/gqlgenc/introspection"
 	"io/ioutil"
 	"net/http"
@@ -255,10 +256,9 @@ func (c *Config) loadRemoteSchema(ctx context.Context) (*ast.Schema, error) {
 	}
 
 	gqlClient := client.Client{
-		Transport: &client.HttpTransport{
-			Client:         http.DefaultClient,
+		Transport: &transport.Http{
 			URL:            c.Endpoint.URL,
-			RequestOptions: []client.HttpRequestOption{addHeaders},
+			RequestOptions: []transport.HttpRequestOption{addHeaders},
 		},
 	}
 

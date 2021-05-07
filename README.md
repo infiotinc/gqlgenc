@@ -4,9 +4,9 @@
 
 > gqlgenc is a fully featured go gql client, powered by codegen 
 
-## Why yet another go GQL client ?
+## Why yet another Go GQL client ?
 
-| Repo                                        | Codegen | Websocket Subscription |
+| Package                                     | Codegen | Websocket Subscription |
 |---------------------------------------------|---------|------------------------|
 | https://github.com/shurcooL/graphql         | ❌      | ❌                      |
 | https://github.com/Yamashou/gqlgenc         | ✅      | ❌                      |
@@ -16,6 +16,8 @@
 ## GQL Client
 
 ### Transports
+
+gqlgenc is transport agnostic, and ships with 3 transport implementations:
 
 - http: Transports GQL queries over http
 - ws: Transports GQL queries over websocket
@@ -31,23 +33,24 @@ package main
 import (
     "context"
     "github.com/infiotinc/gqlgenc/client"
+    "github.com/infiotinc/gqlgenc/client/transport"
 )
 
 func main() {
     ctx := context.Background()
 
-    wstr := &client.WsTransport{
+    wstr := &transport.Ws{
         Context: ctx,
         URL:     "ws://example.org/graphql",
     }
     wstr.Start()
     defer wstr.Close()
 
-    httptr := &client.HttpTransport{
-        URL:    "http://example.org/graphql",
+    httptr := &transport.Http{
+        URL: "http://example.org/graphql",
     }
 
-    tr := client.SplitSubscription(wstr, httptr)
+    tr := transport.SplitSubscription(wstr, httptr)
 
     cli := &client.Client {
         Transport: tr,
@@ -61,7 +64,7 @@ func main() {
 var res struct {
     Room string `json:"room"`
 }
-err := cli.Query(ctx, "query { room }", nil, &res)
+err := cli.Query(ctx, "", "query { room }", nil, &res) // or Mutation
 if err != nil {
     panic(err)
 }
@@ -70,7 +73,7 @@ if err != nil {
 ### Subscription
 
 ```go
-sub, err := cli.Subscription(ctx, "subscription { newRoom }", nil)
+sub, err := cli.Subscription(ctx, "", "subscription { newRoom }", nil)
 if err != nil {
     panic(err)
 }

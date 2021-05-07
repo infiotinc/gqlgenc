@@ -1,4 +1,4 @@
-package client
+package transport
 
 // Original work from https://github.com/hasura/go-graphql-client/blob/0806e5ec7/subscription.go
 
@@ -76,10 +76,9 @@ type ConnOptions struct {
 
 type wsResponse struct {
 	Request
-
+	ch chan OperationResponse
 	close func() error
 
-	ch      chan OperationResponse
 	cor     OperationResponse
 	err     error
 	started bool
@@ -100,7 +99,9 @@ func (r wsResponse) Get() OperationResponse {
 }
 
 func (r *wsResponse) Close() {
-	r.err = r.close()
+	if r.close != nil {
+		r.err = r.close()
+	}
 }
 
 func (r wsResponse) Err() error {
@@ -109,10 +110,10 @@ func (r wsResponse) Err() error {
 
 type NewWebsocketConnFunc func(ctx context.Context, URL string) (WebsocketConn, error)
 
-// WsTransport transports GQL queries over websocket
+// Ws transports GQL queries over websocket
 // Start() must be called to initiate the websocket connection
 // Close() must be called to dispose of the connection
-type WsTransport struct {
+type Ws struct {
 	Context context.Context
 	URL     string
 
@@ -136,7 +137,7 @@ type WsTransport struct {
 	wsLog    bool // set the "WS_LOG" env to true to enable
 }
 
-func (t *WsTransport) initStruct() {
+func (t *Ws) initStruct() {
 	t.initOnce.Do(func() {
 		if t.operations == nil {
 			t.operations = map[string]*wsResponse{}
@@ -154,7 +155,7 @@ func (t *WsTransport) initStruct() {
 	})
 }
 
-func (t *WsTransport) Start() {
+func (t *Ws) Start() {
 	go func() {
 		err := t.Run()
 		if err != nil {
@@ -163,7 +164,7 @@ func (t *WsTransport) Start() {
 	}()
 }
 
-func (t *WsTransport) setIsRunning(value bool) {
+func (t *Ws) setIsRunning(value bool) {
 	t.printLog(GQL_INTERNAL, "TRY ISRUNNING", value)
 	t.operationsm.Lock()
 	t.isRunning = value
@@ -172,7 +173,7 @@ func (t *WsTransport) setIsRunning(value bool) {
 }
 
 // Run will connect and attempt to reconnect until RetryTimeout is exhausted, or until some protocol error happens
-func (t *WsTransport) Run() error {
+func (t *Ws) Run() error {
 	t.initStruct()
 
 	t.printLog(GQL_INTERNAL, "RUN")
@@ -264,7 +265,7 @@ func (t *WsTransport) Run() error {
 	return t.Reset()
 }
 
-func (t *WsTransport) Reset() error {
+func (t *Ws) Reset() error {
 	t.printLog(GQL_INTERNAL, "RESET")
 
 	if !t.isRunning {
@@ -286,7 +287,7 @@ func (t *WsTransport) Reset() error {
 	return t.Run()
 }
 
-func (t *WsTransport) Close() error {
+func (t *Ws) Close() error {
 	t.setIsRunning(false)
 	for id := range t.operations {
 		if err := t.unsubscribe(id); err != nil {
@@ -307,7 +308,7 @@ func (t *WsTransport) Close() error {
 	return err
 }
 
-func (t *WsTransport) startSubscription(id string, res *wsResponse) error {
+func (t *Ws) startSubscription(id string, res *wsResponse) error {
 	if res == nil || res.started {
 		return nil
 	}
@@ -346,7 +347,7 @@ func (t *WsTransport) startSubscription(id string, res *wsResponse) error {
 	return nil
 }
 
-func (t *WsTransport) stopSubscription(id string) error {
+func (t *Ws) stopSubscription(id string) error {
 	if t.conn == nil {
 		return nil
 	}
@@ -360,7 +361,7 @@ func (t *WsTransport) stopSubscription(id string) error {
 	return t.conn.WriteJSON(msg)
 }
 
-func (t *WsTransport) unsubscribe(id string) error {
+func (t *Ws) unsubscribe(id string) error {
 	t.operationsm.Lock()
 	res, ok := t.operations[id]
 	if !ok {
@@ -375,7 +376,7 @@ func (t *WsTransport) unsubscribe(id string) error {
 	return err
 }
 
-func (t *WsTransport) terminate() error {
+func (t *Ws) terminate() error {
 	if t.conn != nil {
 		// send terminate message to the server
 		msg := OperationMessage{
@@ -389,7 +390,7 @@ func (t *WsTransport) terminate() error {
 	return nil
 }
 
-func (t *WsTransport) Request(req Request) (Response, error) {
+func (t *Ws) Request(req Request) (Response, error) {
 	t.initStruct()
 
 	t.printLog(GQL_INTERNAL, "REQ")
@@ -419,7 +420,7 @@ func (t *WsTransport) Request(req Request) (Response, error) {
 	return res, nil
 }
 
-func (t *WsTransport) sendConnectionInit() error {
+func (t *Ws) sendConnectionInit() error {
 	var bParams []byte = nil
 	if t.ConnectionParams != nil {
 		var err error
@@ -438,7 +439,7 @@ func (t *WsTransport) sendConnectionInit() error {
 	return t.conn.WriteJSON(msg)
 }
 
-func (t *WsTransport) init() error {
+func (t *Ws) init() error {
 	t.printLog(GQL_INTERNAL, "INIT")
 
 	start := time.Now()
@@ -478,7 +479,7 @@ func (t *WsTransport) init() error {
 	}
 }
 
-func (t *WsTransport) printLog(typ OperationMessageType, rest ...interface{}) {
+func (t *Ws) printLog(typ OperationMessageType, rest ...interface{}) {
 	if t.wsLog {
 		fmt.Printf("# %-20v: ", typ)
 		fmt.Println(rest...)
