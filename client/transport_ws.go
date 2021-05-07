@@ -109,13 +109,20 @@ func (r wsResponse) Err() error {
 
 type NewWebsocketConnFunc func(ctx context.Context, URL string) (WebsocketConn, error)
 
+// WsTransport transports GQL queries over websocket
+// Start() must be called to initiate the websocket connection
+// Close() must be called to dispose of the connection
 type WsTransport struct {
-	Context          context.Context
-	URL              string
+	Context context.Context
+	URL     string
+
+	// ConnectionParams will be sent during the connection init
 	ConnectionParams interface{}
 	NewWebsocketConn NewWebsocketConnFunc
-	Timeout          time.Duration
-	RetryTimeout     time.Duration
+	// Timeout for reading/writing on the connection, default to 1 minute
+	Timeout time.Duration
+	// Timeout for retrying connecting, default to 5 minutes
+	RetryTimeout time.Duration
 
 	conn        WebsocketConn
 	operations  map[string]*wsResponse
@@ -125,17 +132,25 @@ type WsTransport struct {
 	context     context.Context
 	cancel      context.CancelFunc
 
-	o     sync.Once
-	wsLog bool
+	initOnce sync.Once
+	wsLog    bool // set the "WS_LOG" env to true to enable
 }
 
 func (t *WsTransport) initStruct() {
-	t.o.Do(func() {
+	t.initOnce.Do(func() {
 		if t.operations == nil {
 			t.operations = map[string]*wsResponse{}
 		}
 
 		t.wsLog, _ = strconv.ParseBool(os.Getenv("WS_LOG"))
+
+		if t.Timeout == 0 {
+			t.Timeout = time.Minute
+		}
+
+		if t.RetryTimeout == 0 {
+			t.RetryTimeout = 5 * time.Minute
+		}
 	})
 }
 
@@ -179,7 +194,7 @@ func (t *WsTransport) Run() error {
 			var message OperationMessage
 			if err := t.conn.ReadJSON(&message); err != nil {
 				if errors.Is(err, context.DeadlineExceeded) {
-					continue // Is expected as part of conn.ReadJSON
+					continue // Is expected as part of conn.ReadJSON timeout
 				}
 
 				t.printLog(GQL_INTERNAL, "READ ERR", err)
@@ -458,7 +473,7 @@ func (t *WsTransport) init() error {
 		}
 
 		t.printLog(GQL_INTERNAL, err.Error()+". retry in second....")
-		time.Sleep(t.RetryTimeout)
+		time.Sleep(time.Second)
 	}
 }
 

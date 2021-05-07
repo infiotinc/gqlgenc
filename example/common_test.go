@@ -58,8 +58,7 @@ func wstr(ctx context.Context, u string) *client.WsTransport {
 	tr := &client.WsTransport{
 		Context:      ctx,
 		URL:          u,
-		Timeout:      time.Minute,
-		RetryTimeout: time.Second,
+		RetryTimeout: time.Second, // We want immediate connection or fail
 	}
 	tr.Start()
 

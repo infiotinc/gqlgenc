@@ -34,8 +34,9 @@ func (r httpResponse) Err() error {
 type HttpRequestOption func(req *http.Request)
 
 type HttpTransport struct {
-	Client         *http.Client
 	URL            string
+	// Client defaults to http.DefaultClient
+	Client         *http.Client
 	RequestOptions []HttpRequestOption
 }
 

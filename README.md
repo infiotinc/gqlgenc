@@ -32,7 +32,6 @@ import (
     "context"
     "github.com/infiotinc/gqlgenc/client"
     "github.com/vektah/gqlparser/v2/ast"
-    "time"
 )
 
 func main() {
@@ -41,8 +40,6 @@ func main() {
     wstr := &client.WsTransport{
         Context: ctx,
         URL:     "ws://example.org/graphql",
-        Timeout: time.Minute,
-        RetryTimeout: time.Second,
     }
     wstr.Start()
     defer wstr.Close()
