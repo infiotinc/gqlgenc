@@ -31,7 +31,6 @@ package main
 import (
     "context"
     "github.com/infiotinc/gqlgenc/client"
-    "github.com/vektah/gqlparser/v2/ast"
 )
 
 func main() {
@@ -48,13 +47,7 @@ func main() {
         URL:    "http://example.org/graphql",
     }
 
-    tr := client.SplitTransport(func(req client.Request) (client.Transport, error) {
-        if req.OperationType == ast.Subscription {
-            return wstr, nil
-        }
-
-        return httptr, nil
-    })
+    tr := client.SplitSubscription(wstr, httptr)
 
     cli := &client.Client {
         Transport: tr,

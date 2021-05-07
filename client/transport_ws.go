@@ -171,6 +171,7 @@ func (t *WsTransport) setIsRunning(value bool) {
 	t.operationsm.Unlock()
 }
 
+// Run will connect and attempt to reconnect until RetryTimeout is exhausted, or until some protocol error happens
 func (t *WsTransport) Run() error {
 	t.initStruct()
 

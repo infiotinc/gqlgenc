@@ -43,7 +43,7 @@ func (c *Client) GetRoom(ctx context.Context) (*GetRoom, error) {
 	vars := map[string]interface{}{}
 
 	var res GetRoom
-	if err := c.Client.Query(ctx, GetRoomDocument, vars, &res); err != nil {
+	if err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &res); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +65,7 @@ type MessageSubscribeMessageAdded struct {
 func (c *Client) SubscribeMessageAdded(ctx context.Context) (chan MessageSubscribeMessageAdded, error) {
 	vars := map[string]interface{}{}
 
-	sub, err := c.Client.Subscription(ctx, SubscribeMessageAddedDocument, vars)
+	sub, err := c.Client.Subscription(ctx, "SubscribeMessageAdded", SubscribeMessageAddedDocument, vars)
 	if err != nil {
 		return nil, err
 	}

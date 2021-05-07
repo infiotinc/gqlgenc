@@ -4,32 +4,28 @@ import (
 	"context"
 	"fmt"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/vektah/gqlparser/v2/parser"
 )
 
 type Client struct {
 	Transport Transport
 }
 
-func (c *Client) do(ctx context.Context, query string, variables map[string]interface{}) (Response, error) {
-	q, errs := parser.ParseQuery(&ast.Source{Input: query})
-	if errs != nil {
-		return nil, errs
-	}
+type Operation ast.Operation
 
-	op := q.Operations[0]
+const (
+	Query        Operation = "query"
+	Mutation     Operation = "mutation"
+	Subscription Operation = "subscription"
+)
 
-	return c.Transport.Request(Request{
+func (c *Client) do(ctx context.Context, operation Operation, operationName string, query string, variables map[string]interface{}, t interface{}) error {
+	res, err := c.Transport.Request(Request{
 		Context:       ctx,
-		OperationType: op.Operation,
-		OperationName: op.Name,
+		Operation:     operation,
 		Query:         query,
+		OperationName: operationName,
 		Variables:     variables,
 	})
-}
-
-func (c *Client) Query(ctx context.Context, query string, variables map[string]interface{}, t interface{}) error {
-	res, err := c.do(ctx, query, variables)
 	if err != nil {
 		return err
 	}
@@ -58,8 +54,28 @@ func (c *Client) Query(ctx context.Context, query string, variables map[string]i
 	return err
 }
 
-func (c *Client) Subscription(ctx context.Context, query string, variables map[string]interface{}) (Response, error) {
-	res, err := c.do(ctx, query, variables)
+// Query runs a query
+// operationName is optional
+func (c *Client) Query(ctx context.Context, operationName string, query string, variables map[string]interface{}, t interface{}) error {
+	return c.do(ctx, Query, operationName, query, variables, t)
+}
+
+// Mutation runs a mutation
+// operationName is optional
+func (c *Client) Mutation(ctx context.Context, operationName string, query string, variables map[string]interface{}, t interface{}) error {
+	return c.do(ctx, Mutation, operationName, query, variables, t)
+}
+
+// Subscription starts a GQL subscription
+// operationName is optional
+func (c *Client) Subscription(ctx context.Context, operationName string, query string, variables map[string]interface{}) (Response, error) {
+	res, err := c.Transport.Request(Request{
+		Context:       ctx,
+		Operation:     Subscription,
+		Query:         query,
+		OperationName: operationName,
+		Variables:     variables,
+	})
 	if err != nil {
 		return nil, err
 	}

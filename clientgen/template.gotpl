@@ -54,7 +54,7 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                 }
 
 
-                sub, err := c.Client.Subscription(ctx, {{ $model.Name|go }}Document, vars)
+                sub, err := c.Client.Subscription(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars)
                 if err != nil {
             		return nil, err
                 }
@@ -95,8 +95,8 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                 {{- end }}
                 }
 
-                var res {{ $model.ResponseStructName | go }}
-                if err := c.Client.Query(ctx, {{ $model.Name|go }}Document, vars, &res); err != nil {
+                var res {{ $model.ResponseStructName|go }}
+                if err := c.Client.{{ $model.OperationType|ucFirst }}(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars, &res); err != nil {
                     return nil, err
                 }
 

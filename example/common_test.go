@@ -119,7 +119,7 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (client.T
 
 func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client) {
 	var opres RoomQueryResponse
-	err := cli.Query(ctx, roomQuery, nil, &opres)
+	err := cli.Query(ctx, "", roomQuery, nil, &opres)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client) {
 }
 
 func runAssertSub(t *testing.T, ctx context.Context, cli *client.Client) {
-	res, err := cli.Subscription(ctx, messagesSub, nil)
+	res, err := cli.Subscription(ctx, "", messagesSub, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

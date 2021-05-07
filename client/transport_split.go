@@ -18,3 +18,14 @@ func SplitTransport(f funcSplitTransport) Transport {
 		return tr.Request(req)
 	})
 }
+
+// SplitSubscription routes subscription to subtr, and other type of queries to othertr
+func SplitSubscription(subtr, othertr Transport) Transport {
+	return SplitTransport(func(req Request) (Transport, error) {
+		if req.Operation == Subscription {
+			return subtr, nil
+		}
+
+		return othertr, nil
+	})
+}

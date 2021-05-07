@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
@@ -28,7 +27,7 @@ func (r OperationResponse) UnmarshalData(t interface{}) error {
 
 type Request struct {
 	Context       context.Context
-	OperationType ast.Operation
+	Operation     Operation
 	OperationName string
 
 	Query     string

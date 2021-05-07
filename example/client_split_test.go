@@ -2,9 +2,8 @@ package example
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/infiotinc/gqlgenc/client"
+	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
 )
@@ -41,13 +40,7 @@ func splitcli(ctx context.Context) (*client.Client, func(), *splitStats) {
 		s_wstr := ss.wrapTr("ws", wstr)
 		s_httptr := ss.wrapTr("http", httptr)
 
-		tr := client.SplitTransport(func(req client.Request) (client.Transport, error) {
-			if req.OperationType == ast.Subscription {
-				return s_wstr, nil
-			}
-
-			return s_httptr, nil
-		})
+		tr := client.SplitSubscription(s_wstr, s_httptr)
 
 		return tr, func() {
 			wstr.Close()
@@ -84,4 +77,3 @@ func TestRawSplitSubscription(t *testing.T) {
 	assert.Equal(t, 0, ss.get("http"))
 	assert.Equal(t, 1, ss.get("ws"))
 }
-
