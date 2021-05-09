@@ -13,6 +13,7 @@ import (
 	"github.com/infiotinc/gqlgenc/client"
 	"github.com/infiotinc/gqlgenc/client/transport"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -50,6 +51,15 @@ type MessagesSubResponse struct {
 }
 
 func wstr(ctx context.Context, u string) *transport.Ws {
+	return cwstr(
+		ctx,
+		u,
+		nil,
+		time.Second, // We want immediate connection or fail
+	)
+}
+
+func cwstr(ctx context.Context, u string, newWebsocketConn transport.WebsocketConnProvider, retryTimeout time.Duration) *transport.Ws {
 	_ = os.Setenv("WS_LOG", "1")
 
 	if strings.HasPrefix(u, "http") {
@@ -57,11 +67,17 @@ func wstr(ctx context.Context, u string) *transport.Ws {
 	}
 
 	tr := &transport.Ws{
-		Context:      ctx,
-		URL:          u,
-		RetryTimeout: time.Second, // We want immediate connection or fail
+		Context:               ctx,
+		URL:                   u,
+		RetryTimeout:          retryTimeout,
+		WebsocketConnProvider: newWebsocketConn,
 	}
-	tr.Start()
+	errCh := tr.Start()
+	go func() {
+		for err := range errCh {
+			log.Println("Ws Transport error: ", err)
+		}
+	}()
 
 	return tr
 }
@@ -81,7 +97,7 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 
 	srv.AddTransport(htransport.POST{})
 	srv.AddTransport(htransport.Websocket{
-		KeepAlivePingInterval: 10 * time.Second,
+		KeepAlivePingInterval: 400 * time.Millisecond,
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true

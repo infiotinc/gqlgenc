@@ -13,4 +13,5 @@ require (
 	github.com/urfave/cli/v2 v2.1.1
 	github.com/vektah/gqlparser/v2 v2.1.0
 	golang.org/x/tools v0.0.0-20200827163409-021d7c6f1ec3
+	nhooyr.io/websocket v1.8.7
 )

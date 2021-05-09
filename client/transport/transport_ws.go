@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -76,12 +77,13 @@ type ConnOptions struct {
 
 type wsResponse struct {
 	Request
-	ch chan OperationResponse
+	ch    chan OperationResponse
 	close func() error
 
 	cor     OperationResponse
 	err     error
 	started bool
+	m       sync.Mutex
 }
 
 func (r *wsResponse) Next() bool {
@@ -94,7 +96,7 @@ func (r *wsResponse) Next() bool {
 	return ok
 }
 
-func (r wsResponse) Get() OperationResponse {
+func (r *wsResponse) Get() OperationResponse {
 	return r.cor
 }
 
@@ -104,14 +106,14 @@ func (r *wsResponse) Close() {
 	}
 }
 
-func (r wsResponse) Err() error {
+func (r *wsResponse) Err() error {
 	return r.err
 }
 
-type NewWebsocketConnFunc func(ctx context.Context, URL string) (WebsocketConn, error)
+type WebsocketConnProvider func(ctx context.Context, URL string) (WebsocketConn, error)
 
 // Ws transports GQL queries over websocket
-// Start() must be called to initiate the websocket connection
+// Run() must be called to initiate the websocket connection (Start() is a convenience method)
 // Close() must be called to dispose of the connection
 type Ws struct {
 	Context context.Context
@@ -119,13 +121,14 @@ type Ws struct {
 
 	// ConnectionParams will be sent during the connection init
 	ConnectionParams interface{}
-	NewWebsocketConn NewWebsocketConnFunc
-	// Timeout for reading/writing on the connection, default to 1 minute
-	Timeout time.Duration
+	// WebsocketConnProvider defaults to DefaultWebsocketConnProvider(time.Minute)
+	WebsocketConnProvider WebsocketConnProvider
 	// Timeout for retrying connecting, default to 5 minutes
 	RetryTimeout time.Duration
 
-	conn        WebsocketConn
+	i           uint64
+	_conn       WebsocketConn
+	connm       sync.RWMutex
 	operations  map[string]*wsResponse
 	operationsm sync.Mutex
 	started     bool
@@ -143,25 +146,37 @@ func (t *Ws) initStruct() {
 			t.operations = map[string]*wsResponse{}
 		}
 
-		t.wsLog, _ = strconv.ParseBool(os.Getenv("WS_LOG"))
-
-		if t.Timeout == 0 {
-			t.Timeout = time.Minute
-		}
-
 		if t.RetryTimeout == 0 {
 			t.RetryTimeout = 5 * time.Minute
 		}
+
+		if t.WebsocketConnProvider == nil {
+			t.WebsocketConnProvider = DefaultWebsocketConnProvider(time.Minute)
+		}
+
+		t.wsLog, _ = strconv.ParseBool(os.Getenv("WS_LOG"))
 	})
 }
 
-func (t *Ws) Start() {
+func (t *Ws) Start() chan error {
+	ch := make(chan error)
+
 	go func() {
-		err := t.Run()
-		if err != nil {
-			panic(err)
+		for {
+			err := t.Run()
+			if err == nil {
+				close(ch)
+				return
+			}
+
+			select {
+			case ch <- err: // Attempt to write err
+			default:
+			}
 		}
 	}()
+
+	return ch
 }
 
 func (t *Ws) setIsRunning(value bool) {
@@ -186,15 +201,15 @@ func (t *Ws) Run() error {
 
 	t.setIsRunning(true)
 
-	t.printLog(GQL_INTERNAL, "FULLY RUNNING")
-
 	for t.isRunning {
+		t.printLog(GQL_INTERNAL, "FULLY RUNNING")
+
 		select {
 		case <-t.context.Done():
 			return nil
 		default:
 			var message OperationMessage
-			if err := t.conn.ReadJSON(&message); err != nil {
+			if err := t.GetConn().ReadJSON(&message); err != nil {
 				if errors.Is(err, context.DeadlineExceeded) {
 					continue // Is expected as part of conn.ReadJSON timeout
 				}
@@ -228,14 +243,16 @@ func (t *Ws) Run() error {
 				if !ok {
 					continue
 				}
+				t.operationsm.Unlock()
 
 				var out OperationResponse
 				err := json.Unmarshal(message.Payload, &out)
 				if err != nil {
-					out.Errors = gqlerror.List{gqlerror.WrapPath(nil, err)}
+					out.Errors = append(out.Errors, gqlerror.WrapPath(nil, err))
 				}
+				sub.m.Lock()
 				sub.ch <- out
-				t.operationsm.Unlock()
+				sub.m.Unlock()
 			case GQL_CONNECTION_ERROR:
 				t.printLog(GQL_CONNECTION_ERROR, message)
 			case GQL_COMPLETE:
@@ -247,6 +264,7 @@ func (t *Ws) Run() error {
 				t.printLog(GQL_CONNECTION_ACK, message)
 				for k, v := range t.operations {
 					if err := t.startSubscription(k, v); err != nil {
+						t.printLog(GQL_INTERNAL, "ACK: START SUB FAILED")
 						_ = t.unsubscribe(k)
 						return err
 					}
@@ -277,17 +295,23 @@ func (t *Ws) Reset() error {
 		op.started = false
 	}
 
-	if t.conn != nil {
+	if c := t.GetConn(); c != nil {
 		_ = t.terminate()
-		_ = t.conn.Close()
-		t.conn = nil
+		_ = c.Close()
+		t.SetConn(nil)
 	}
 	t.cancel()
+
+	atomic.StoreUint64(&t.i, 0)
 
 	return t.Run()
 }
 
 func (t *Ws) Close() error {
+	t.initStruct()
+
+	t.printLog(GQL_INTERNAL, "CLOSE")
+
 	t.setIsRunning(false)
 	for id := range t.operations {
 		if err := t.unsubscribe(id); err != nil {
@@ -298,10 +322,10 @@ func (t *Ws) Close() error {
 
 	var err error
 
-	if t.conn != nil {
+	if c := t.GetConn(); c != nil {
 		_ = t.terminate()
-		err = t.conn.Close()
-		t.conn = nil
+		err = c.Close()
+		t.SetConn(nil)
 	}
 	t.cancel()
 
@@ -333,22 +357,24 @@ func (t *Ws) startSubscription(id string, res *wsResponse) error {
 	}
 
 	t.printLog(GQL_START, msg)
-	if err := t.conn.WriteJSON(msg); err != nil {
+	if err := t.GetConn().WriteJSON(msg); err != nil {
+		t.printLog(GQL_INTERNAL, "GQL_START ERR", err)
 		return err
 	}
 
+	res.started = true
+
 	go func() {
 		<-res.Context.Done()
+		t.printLog(GQL_INTERNAL, "CTX DONE")
 		_ = t.unsubscribe(id)
 	}()
-
-	res.started = true
 
 	return nil
 }
 
 func (t *Ws) stopSubscription(id string) error {
-	if t.conn == nil {
+	if t.GetConn() == nil {
 		return nil
 	}
 
@@ -358,33 +384,38 @@ func (t *Ws) stopSubscription(id string) error {
 	}
 
 	t.printLog(GQL_STOP, msg)
-	return t.conn.WriteJSON(msg)
+	return t.GetConn().WriteJSON(msg)
 }
 
 func (t *Ws) unsubscribe(id string) error {
+	t.printLog(GQL_INTERNAL, "UNSUB")
+
 	t.operationsm.Lock()
 	res, ok := t.operations[id]
 	if !ok {
+		t.operationsm.Unlock()
 		return fmt.Errorf("subscription id %s doesn't not exist", id)
 	}
+	delete(t.operations, id)
+	t.operationsm.Unlock()
 
 	err := t.stopSubscription(id)
 
-	delete(t.operations, id)
+	res.m.Lock()
 	close(res.ch)
-	t.operationsm.Unlock()
+	res.m.Unlock()
 	return err
 }
 
 func (t *Ws) terminate() error {
-	if t.conn != nil {
+	if t.GetConn() != nil {
 		// send terminate message to the server
 		msg := OperationMessage{
 			Type: GQL_CONNECTION_TERMINATE,
 		}
 
 		t.printLog(GQL_CONNECTION_TERMINATE, msg)
-		return t.conn.WriteJSON(msg)
+		return t.GetConn().WriteJSON(msg)
 	}
 
 	return nil
@@ -395,11 +426,12 @@ func (t *Ws) Request(req Request) (Response, error) {
 
 	t.printLog(GQL_INTERNAL, "REQ")
 
-	id := fmt.Sprintf("%p-%v", &req, time.Now().Nanosecond())
+	id := fmt.Sprintf("%v", atomic.AddUint64(&t.i, 1))
 
 	res := &wsResponse{
 		Request: req,
 		close: func() error {
+			t.printLog(GQL_INTERNAL, "CLOSE RES")
 			return t.unsubscribe(id)
 		},
 		ch: make(chan OperationResponse),
@@ -436,7 +468,7 @@ func (t *Ws) sendConnectionInit() error {
 	}
 
 	t.printLog(GQL_CONNECTION_INIT, msg)
-	return t.conn.WriteJSON(msg)
+	return t.GetConn().WriteJSON(msg)
 }
 
 func (t *Ws) init() error {
@@ -447,18 +479,14 @@ func (t *Ws) init() error {
 	t.context = ctx
 	t.cancel = cancel
 
-	if t.NewWebsocketConn == nil {
-		t.NewWebsocketConn = NewWebsocketConn(t.Timeout)
-	}
-
 	for {
 		var err error
 		var conn WebsocketConn
 		// allow custom websocket client
-		if t.conn == nil {
-			conn, err = t.NewWebsocketConn(ctx, t.URL)
+		if t.GetConn() == nil {
+			conn, err = t.WebsocketConnProvider(ctx, t.URL)
 			if err == nil {
-				t.conn = conn
+				t.SetConn(conn)
 			}
 		}
 
@@ -471,10 +499,12 @@ func (t *Ws) init() error {
 		}
 
 		if time.Now().After(start.Add(t.RetryTimeout)) {
+			t.printLog(GQL_INTERNAL, "RetryTimeout exceeded", t.RetryTimeout)
+
 			return err
 		}
 
-		t.printLog(GQL_INTERNAL, err.Error()+". retry in second....")
+		t.printLog(GQL_INTERNAL, err.Error()+"\n retry in 1 second....")
 		time.Sleep(time.Second)
 	}
 }
@@ -484,4 +514,16 @@ func (t *Ws) printLog(typ OperationMessageType, rest ...interface{}) {
 		fmt.Printf("# %-20v: ", typ)
 		fmt.Println(rest...)
 	}
+}
+
+func (t *Ws) SetConn(conn WebsocketConn) {
+	t.connm.Lock()
+	defer t.connm.Unlock()
+	t._conn = conn
+}
+
+func (t *Ws) GetConn() WebsocketConn {
+	t.connm.RLock()
+	defer t.connm.RUnlock()
+	return t._conn
 }

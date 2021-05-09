@@ -9,33 +9,33 @@ import (
 	"time"
 )
 
-// default websocket handler implementation using https://github.com/nhooyr/websocket
-type websocketHandler struct {
+// WebsocketHandler is default websocket handler implementation using https://github.com/nhooyr/websocket
+type WebsocketHandler struct {
 	ctx     context.Context
 	timeout time.Duration
 	*websocket.Conn
 }
 
-func (wh *websocketHandler) WriteJSON(v interface{}) error {
+func (wh *WebsocketHandler) WriteJSON(v interface{}) error {
 	ctx, cancel := context.WithTimeout(wh.ctx, wh.timeout)
 	defer cancel()
 
 	return wsjson.Write(ctx, wh.Conn, v)
 }
 
-func (wh *websocketHandler) ReadJSON(v interface{}) error {
+func (wh *WebsocketHandler) ReadJSON(v interface{}) error {
 	ctx, cancel := context.WithTimeout(wh.ctx, wh.timeout)
 	defer cancel()
 	return wsjson.Read(ctx, wh.Conn, v)
 }
 
-func (wh *websocketHandler) Close() error {
+func (wh *WebsocketHandler) Close() error {
 	return wh.Conn.Close(websocket.StatusNormalClosure, "close websocket")
 }
 
 type WsDialOption func(o *websocket.DialOptions)
 
-func NewWebsocketConn(timeout time.Duration, optionfs ...WsDialOption) NewWebsocketConnFunc {
+func DefaultWebsocketConnProvider(timeout time.Duration, optionfs ...WsDialOption) WebsocketConnProvider {
 	return func(ctx context.Context, URL string) (WebsocketConn, error) {
 		options := &websocket.DialOptions{
 			Subprotocols: []string{"graphql-ws"},
@@ -49,7 +49,7 @@ func NewWebsocketConn(timeout time.Duration, optionfs ...WsDialOption) NewWebsoc
 			return nil, err
 		}
 
-		return &websocketHandler{
+		return &WebsocketHandler{
 			ctx:     ctx,
 			Conn:    c,
 			timeout: timeout,

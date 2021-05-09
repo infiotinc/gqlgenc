@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func wscli(ctx context.Context) (*client.Client, func()) {
+func wscli(ctx context.Context, newWebsocketConn transport.WebsocketConnProvider) (*client.Client, func()) {
 	return clifactory(ctx, func(ts *httptest.Server) (transport.Transport, func()) {
 		tr := wstr(ctx, ts.URL)
 
@@ -21,7 +21,7 @@ func wscli(ctx context.Context) (*client.Client, func()) {
 func TestRawWSQuery(t *testing.T) {
 	ctx := context.Background()
 
-	cli, teardown := wscli(ctx)
+	cli, teardown := wscli(ctx, nil)
 	defer teardown()
 
 	runAssertQuery(t, ctx, cli)
@@ -30,7 +30,7 @@ func TestRawWSQuery(t *testing.T) {
 func TestRawWSSubscription(t *testing.T) {
 	ctx := context.Background()
 
-	cli, teardown := wscli(ctx)
+	cli, teardown := wscli(ctx, nil)
 	defer teardown()
 
 	runAssertSub(t, ctx, cli)

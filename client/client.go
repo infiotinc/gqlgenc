@@ -21,6 +21,7 @@ func (c *Client) do(ctx context.Context, operation transport.Operation, operatio
 	if err != nil {
 		return err
 	}
+	defer res.Close()
 
 	go func() {
 		<-ctx.Done()
@@ -29,11 +30,11 @@ func (c *Client) do(ctx context.Context, operation transport.Operation, operatio
 
 	ok := res.Next()
 	if !ok {
-		return fmt.Errorf("no response")
-	}
+		if err := res.Err(); err != nil {
+			return err
+		}
 
-	if err := res.Err(); err != nil {
-		return err
+		return fmt.Errorf("no response")
 	}
 
 	opres := res.Get()

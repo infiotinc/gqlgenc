@@ -5,6 +5,7 @@ import (
 	"example/graph"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestSubscription(t *testing.T) {
@@ -12,6 +13,8 @@ func TestSubscription(t *testing.T) {
 
 	cli, td, _ := splitcli(ctx)
 	defer td()
+
+	time.Sleep(time.Second)
 
 	gql := &graph.Client{
 		Client: cli,
@@ -40,6 +43,8 @@ func TestQuery(t *testing.T) {
 
 	cli, td, _ := splitcli(ctx)
 	defer td()
+
+	time.Sleep(time.Second)
 
 	gql := &graph.Client{
 		Client: cli,
