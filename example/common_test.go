@@ -55,11 +55,10 @@ func wstr(ctx context.Context, u string) *transport.Ws {
 		ctx,
 		u,
 		nil,
-		time.Second, // We want immediate connection or fail
 	)
 }
 
-func cwstr(ctx context.Context, u string, newWebsocketConn transport.WebsocketConnProvider, retryTimeout time.Duration) *transport.Ws {
+func cwstr(ctx context.Context, u string, newWebsocketConn transport.WebsocketConnProvider) *transport.Ws {
 	_ = os.Setenv("WS_LOG", "1")
 
 	if strings.HasPrefix(u, "http") {
@@ -69,7 +68,6 @@ func cwstr(ctx context.Context, u string, newWebsocketConn transport.WebsocketCo
 	tr := &transport.Ws{
 		Context:               ctx,
 		URL:                   u,
-		RetryTimeout:          retryTimeout,
 		WebsocketConnProvider: newWebsocketConn,
 	}
 	errCh := tr.Start()
@@ -78,6 +76,8 @@ func cwstr(ctx context.Context, u string, newWebsocketConn transport.WebsocketCo
 			log.Println("Ws Transport error: ", err)
 		}
 	}()
+
+	tr.WaitFor(transport.StatusReady, time.Second)
 
 	return tr
 }
@@ -97,14 +97,14 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 
 	srv.AddTransport(htransport.POST{})
 	srv.AddTransport(htransport.Websocket{
-		KeepAlivePingInterval: 400 * time.Millisecond,
+		KeepAlivePingInterval: 500 * time.Millisecond,
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
 			},
 		},
 		InitFunc: func(ctx context.Context, initPayload htransport.InitPayload) (context.Context, error) {
-			fmt.Println("WS Init")
+			fmt.Println("WS Server init received")
 
 			return ctx, nil
 		},
@@ -125,16 +125,19 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 			Transport: tr,
 		}, func() {
 			if trteardown != nil {
+				fmt.Println("CLOSE TR")
 				trteardown()
 			}
 
 			if ts != nil {
+				fmt.Println("CLOSE HTTPTEST")
 				ts.Close()
 			}
 		}
 }
 
 func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client) {
+	fmt.Println("ASSERT QUERY")
 	var opres RoomQueryResponse
 	err := cli.Query(ctx, "", roomQuery, nil, &opres)
 	if err != nil {
@@ -145,6 +148,7 @@ func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client) {
 }
 
 func runAssertSub(t *testing.T, ctx context.Context, cli *client.Client) {
+	fmt.Println("ASSERT SUB")
 	res, err := cli.Subscription(ctx, "", messagesSub, nil)
 	if err != nil {
 		t.Fatal(err)

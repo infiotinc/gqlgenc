@@ -1,7 +1,6 @@
 package transport
 
 // Original work from https://github.com/hasura/go-graphql-client/blob/0806e5ec7/subscription.go
-
 import (
 	"context"
 	"encoding/json"
@@ -10,8 +9,6 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"io"
 	"nhooyr.io/websocket"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -112,344 +109,267 @@ func (r *wsResponse) Err() error {
 
 type WebsocketConnProvider func(ctx context.Context, URL string) (WebsocketConn, error)
 
+type Status int
+
+const (
+	StatusDisconnected Status = iota
+	StatusConnected
+	StatusReady
+)
+
+func (s Status) String() string {
+	switch s {
+	case StatusDisconnected:
+		return "disconnected"
+	case StatusConnected:
+		return "connected"
+	case StatusReady:
+		return "ready"
+	}
+
+	panic("unknown status")
+}
+
 // Ws transports GQL queries over websocket
-// Run() must be called to initiate the websocket connection (Start() is a convenience method)
-// Close() must be called to dispose of the connection
+// Start() must be called to initiate the websocket connection
+// Close() must be called to dispose of the transport
 type Ws struct {
 	Context context.Context
 	URL     string
-
+	// WebsocketConnProvider defaults to DefaultWebsocketConnProvider(30 * time.Second)
+	WebsocketConnProvider WebsocketConnProvider
 	// ConnectionParams will be sent during the connection init
 	ConnectionParams interface{}
-	// WebsocketConnProvider defaults to DefaultWebsocketConnProvider(time.Minute)
-	WebsocketConnProvider WebsocketConnProvider
-	// Timeout for retrying connecting, default to 5 minutes
-	RetryTimeout time.Duration
 
-	i           uint64
-	_conn       WebsocketConn
-	connm       sync.RWMutex
-	operations  map[string]*wsResponse
-	operationsm sync.Mutex
-	started     bool
-	isRunning   bool
-	context     context.Context
-	cancel      context.CancelFunc
+	ctx     context.Context
+	cancel  context.CancelFunc
+	conn    WebsocketConn
+	running bool
+	status  Status
+	sc      *sync.Cond
 
-	initOnce sync.Once
-	wsLog    bool // set the "WS_LOG" env to true to enable
+	ops  map[string]*wsResponse
+	opsm sync.Mutex
+
+	o     sync.Once
+	errCh chan error
+	i     uint64
+	rm    sync.Mutex
 }
 
-func (t *Ws) initStruct() {
-	t.initOnce.Do(func() {
-		if t.operations == nil {
-			t.operations = map[string]*wsResponse{}
-		}
+func (t *Ws) init() {
+	t.o.Do(func() {
+		t.ops = make(map[string]*wsResponse)
 
-		if t.RetryTimeout == 0 {
-			t.RetryTimeout = 5 * time.Minute
-		}
+		t.sc = sync.NewCond(&sync.Mutex{})
+
+		t.conn = &closedWs{}
 
 		if t.WebsocketConnProvider == nil {
-			t.WebsocketConnProvider = DefaultWebsocketConnProvider(time.Minute)
+			t.WebsocketConnProvider = DefaultWebsocketConnProvider(30 * time.Second)
 		}
-
-		t.wsLog, _ = strconv.ParseBool(os.Getenv("WS_LOG"))
 	})
 }
 
-func (t *Ws) Start() chan error {
-	ch := make(chan error)
+func (t *Ws) WaitFor(st Status, s time.Duration) {
+	t.init()
 
-	go func() {
-		for {
-			err := t.Run()
-			if err == nil {
-				close(ch)
-				return
-			}
+	t.printLog(GQL_INTERNAL, "WAIT FOR", st)
 
-			select {
-			case ch <- err: // Attempt to write err
-			default:
-			}
+	for {
+		t.waitFor(st)
+
+		time.Sleep(s)
+
+		// After timeout, is it still in the expected status ?
+		if t.status == st {
+			break
 		}
-	}()
-
-	return ch
-}
-
-func (t *Ws) setIsRunning(value bool) {
-	t.printLog(GQL_INTERNAL, "TRY ISRUNNING", value)
-	t.operationsm.Lock()
-	t.isRunning = value
-	t.printLog(GQL_INTERNAL, "ISRUNNING SET", value)
-	t.operationsm.Unlock()
-}
-
-// Run will connect and attempt to reconnect until RetryTimeout is exhausted, or until some protocol error happens
-func (t *Ws) Run() error {
-	t.initStruct()
-
-	t.printLog(GQL_INTERNAL, "RUN")
-
-	if err := t.init(); err != nil {
-		return fmt.Errorf("retry timeout. exiting...")
 	}
 
-	t.printLog(GQL_INTERNAL, "INIT DONE")
+	t.printLog(GQL_INTERNAL, "DONE WAIT FOR", st)
+}
 
-	t.setIsRunning(true)
+func (t *Ws) waitFor(s Status) {
+	t.init()
 
-	for t.isRunning {
-		t.printLog(GQL_INTERNAL, "FULLY RUNNING")
+	t.sc.L.Lock()
+	defer t.sc.L.Unlock()
+	for t.status != s {
+		t.sc.Wait()
+	}
+}
+
+func (t *Ws) setRunning(v bool) {
+	t.printLog(GQL_INTERNAL, "SET SET ISRUNNING", v)
+	t.running = v
+	if v == false {
+		t.setStatus(StatusDisconnected)
+	}
+	t.sc.Broadcast()
+}
+
+func (t *Ws) setStatus(s Status) {
+	if t.status == s {
+		return
+	}
+
+	t.printLog(GQL_INTERNAL, "SET STATUS", s)
+	t.status = s
+	t.sc.Broadcast()
+}
+
+func (t *Ws) Start() <-chan error {
+	t.init()
+
+	if t.running {
+		panic("transport is already running")
+	}
+
+	t.errCh = make(chan error)
+
+	go t.run()
+
+	return t.errCh
+}
+
+func (t *Ws) readJson(v interface{}) error {
+	return t.conn.ReadJSON(v)
+}
+
+func (t *Ws) writeJson(v interface{}) error {
+	return t.conn.WriteJSON(v)
+}
+
+func (t *Ws) run() {
+	defer func() {
+		close(t.errCh)
+	}()
+
+	t.setRunning(true)
+
+	for {
+		t.printLog(GQL_INTERNAL, "STATUS", t.status)
 
 		select {
-		case <-t.context.Done():
-			return nil
+		case <-t.Context.Done():
+			if !t.running { // Unexpected cancel
+				err := t.ctx.Err()
+				t.printLog(GQL_INTERNAL, "CTX DONE", err)
+				t.errCh <- err
+			}
+			return
 		default:
-			var message OperationMessage
-			if err := t.GetConn().ReadJSON(&message); err != nil {
-				if errors.Is(err, context.DeadlineExceeded) {
-					continue // Is expected as part of conn.ReadJSON timeout
-				}
+			// continue...
+		}
 
-				t.printLog(GQL_INTERNAL, "READ ERR", err)
+		if t.status == StatusDisconnected {
+			if t.cancel != nil {
+				t.cancel()
+			}
+			t.ctx, t.cancel = context.WithCancel(t.Context)
 
-				if err == io.EOF || strings.Contains(err.Error(), "EOF") {
-					return t.Reset()
-				}
-				closeStatus := websocket.CloseStatus(err)
-				if closeStatus == websocket.StatusNormalClosure {
-					// close event from websocket client, exiting...
-					return nil
-				}
-				if closeStatus != -1 {
-					return t.Reset()
-				}
+			t.printLog(GQL_INTERNAL, "CONNECTING")
+			conn, err := t.WebsocketConnProvider(t.ctx, t.URL)
+			if err != nil {
+				t.printLog(GQL_INTERNAL, "WebsocketConnProvider ERR", err)
+
+				t.ResetWithErr(err)
+
+				time.Sleep(time.Second)
+				continue
+			}
+			t.printLog(GQL_INTERNAL, "HAS CONN")
+			t.conn = conn
+			t.setStatus(StatusConnected)
+
+			err = t.sendConnectionInit()
+			if err != nil {
+				t.printLog(GQL_INTERNAL, "sendConnectionInit ERR", err)
+
+				t.ResetWithErr(err)
+				time.Sleep(time.Second)
 				continue
 			}
 
-			switch message.Type {
-			case GQL_ERROR:
-				t.printLog(GQL_ERROR, message)
-				fallthrough
-			case GQL_DATA:
-				t.printLog(GQL_DATA, message)
+			t.printLog(GQL_INTERNAL, "CONNECTED")
+		}
 
-				id := message.ID
-				t.operationsm.Lock()
-				sub, ok := t.operations[id]
-				if !ok {
-					continue
-				}
-				t.operationsm.Unlock()
-
-				var out OperationResponse
-				err := json.Unmarshal(message.Payload, &out)
-				if err != nil {
-					out.Errors = append(out.Errors, gqlerror.WrapPath(nil, err))
-				}
-				sub.m.Lock()
-				sub.ch <- out
-				sub.m.Unlock()
-			case GQL_CONNECTION_ERROR:
-				t.printLog(GQL_CONNECTION_ERROR, message)
-			case GQL_COMPLETE:
-				t.printLog(GQL_COMPLETE, message)
-				_ = t.unsubscribe(message.ID)
-			case GQL_CONNECTION_KEEP_ALIVE:
-				t.printLog(GQL_CONNECTION_KEEP_ALIVE, message)
-			case GQL_CONNECTION_ACK:
-				t.printLog(GQL_CONNECTION_ACK, message)
-				for k, v := range t.operations {
-					if err := t.startSubscription(k, v); err != nil {
-						t.printLog(GQL_INTERNAL, "ACK: START SUB FAILED")
-						_ = t.unsubscribe(k)
-						return err
-					}
-				}
-			default:
-				t.printLog(GQL_UNKNOWN, message)
+		var message OperationMessage
+		if err := t.readJson(&message); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				t.printLog(GQL_INTERNAL, "READ DEADLINE EXCEEDED")
+				continue // Is expected as part of conn.ReadJSON timeout
 			}
-		}
-	}
 
-	// if the running status is false, stop retrying
-	if !t.isRunning {
-		return nil
-	}
+			t.printLog(GQL_INTERNAL, "READ JSON ERR", err)
 
-	return t.Reset()
-}
-
-func (t *Ws) Reset() error {
-	t.printLog(GQL_INTERNAL, "RESET")
-
-	if !t.isRunning {
-		return nil
-	}
-
-	for id, op := range t.operations {
-		_ = t.stopSubscription(id)
-		op.started = false
-	}
-
-	if c := t.GetConn(); c != nil {
-		_ = t.terminate()
-		_ = c.Close()
-		t.SetConn(nil)
-	}
-	t.cancel()
-
-	atomic.StoreUint64(&t.i, 0)
-
-	return t.Run()
-}
-
-func (t *Ws) Close() error {
-	t.initStruct()
-
-	t.printLog(GQL_INTERNAL, "CLOSE")
-
-	t.setIsRunning(false)
-	for id := range t.operations {
-		if err := t.unsubscribe(id); err != nil {
-			t.cancel()
-			return err
-		}
-	}
-
-	var err error
-
-	if c := t.GetConn(); c != nil {
-		_ = t.terminate()
-		err = c.Close()
-		t.SetConn(nil)
-	}
-	t.cancel()
-
-	return err
-}
-
-func (t *Ws) startSubscription(id string, res *wsResponse) error {
-	if res == nil || res.started {
-		return nil
-	}
-
-	t.printLog(GQL_INTERNAL, "START SUB")
-
-	in := OperationRequest{
-		Query:         res.Query,
-		OperationName: res.OperationName,
-		Variables:     res.Variables,
-	}
-
-	payload, err := json.Marshal(in)
-	if err != nil {
-		return err
-	}
-
-	msg := OperationMessage{
-		ID:      id,
-		Type:    GQL_START,
-		Payload: payload,
-	}
-
-	t.printLog(GQL_START, msg)
-	if err := t.GetConn().WriteJSON(msg); err != nil {
-		t.printLog(GQL_INTERNAL, "GQL_START ERR", err)
-		return err
-	}
-
-	res.started = true
-
-	go func() {
-		<-res.Context.Done()
-		t.printLog(GQL_INTERNAL, "CTX DONE")
-		_ = t.unsubscribe(id)
-	}()
-
-	return nil
-}
-
-func (t *Ws) stopSubscription(id string) error {
-	if t.GetConn() == nil {
-		return nil
-	}
-
-	msg := OperationMessage{
-		ID:   id,
-		Type: GQL_STOP,
-	}
-
-	t.printLog(GQL_STOP, msg)
-	return t.GetConn().WriteJSON(msg)
-}
-
-func (t *Ws) unsubscribe(id string) error {
-	t.printLog(GQL_INTERNAL, "UNSUB")
-
-	t.operationsm.Lock()
-	res, ok := t.operations[id]
-	if !ok {
-		t.operationsm.Unlock()
-		return fmt.Errorf("subscription id %s doesn't not exist", id)
-	}
-	delete(t.operations, id)
-	t.operationsm.Unlock()
-
-	err := t.stopSubscription(id)
-
-	res.m.Lock()
-	close(res.ch)
-	res.m.Unlock()
-	return err
-}
-
-func (t *Ws) terminate() error {
-	if t.GetConn() != nil {
-		// send terminate message to the server
-		msg := OperationMessage{
-			Type: GQL_CONNECTION_TERMINATE,
+			if err == io.EOF || strings.Contains(err.Error(), "EOF") {
+				t.ResetWithErr(err)
+				continue
+			}
+			closeStatus := websocket.CloseStatus(err)
+			if closeStatus == websocket.StatusNormalClosure {
+				t.printLog(GQL_INTERNAL, "NORMAL CLOSURE")
+				// close event from websocket client, exiting...
+				return
+			}
+			if closeStatus != -1 {
+				t.ResetWithErr(err)
+				continue
+			}
+			continue
 		}
 
-		t.printLog(GQL_CONNECTION_TERMINATE, msg)
-		return t.GetConn().WriteJSON(msg)
-	}
+		switch message.Type {
+		case GQL_CONNECTION_ACK:
+			t.printLog(GQL_CONNECTION_ACK, message)
+			t.setStatus(StatusReady)
 
-	return nil
-}
+			for id, op := range t.ops {
+				if err := t.startOp(id, op); err != nil {
+					t.printLog(GQL_INTERNAL, "ACK: START OP FAILED")
+					_ = t.cancelOp(id)
+					t.errCh <- err
+				}
+			}
+		case GQL_CONNECTION_KEEP_ALIVE:
+			t.printLog(GQL_CONNECTION_KEEP_ALIVE, message)
+		case GQL_CONNECTION_ERROR:
+			t.printLog(GQL_CONNECTION_ERROR, message)
+			t.setStatus(StatusDisconnected)
+			t.ResetWithErr(fmt.Errorf("gql conn error: %v", message))
+		case GQL_COMPLETE:
+			t.printLog(GQL_COMPLETE, message)
+			_ = t.cancelOp(message.ID)
+		case GQL_ERROR:
+			t.printLog(GQL_ERROR, message)
+			fallthrough
+		case GQL_DATA:
+			t.printLog(GQL_DATA, message)
 
-func (t *Ws) Request(req Request) (Response, error) {
-	t.initStruct()
+			id := message.ID
+			t.opsm.Lock()
+			op, ok := t.ops[id]
+			if !ok {
+				continue
+			}
+			t.opsm.Unlock()
 
-	t.printLog(GQL_INTERNAL, "REQ")
-
-	id := fmt.Sprintf("%v", atomic.AddUint64(&t.i, 1))
-
-	res := &wsResponse{
-		Request: req,
-		close: func() error {
-			t.printLog(GQL_INTERNAL, "CLOSE RES")
-			return t.unsubscribe(id)
-		},
-		ch: make(chan OperationResponse),
-	}
-
-	if t.isRunning {
-		err := t.startSubscription(id, res)
-		if err != nil {
-			return nil, err
+			var out OperationResponse
+			err := json.Unmarshal(message.Payload, &out)
+			if err != nil {
+				out.Errors = append(out.Errors, gqlerror.WrapPath(nil, err))
+			}
+			op.m.Lock()
+			if op.started {
+				op.ch <- out
+			}
+			op.m.Unlock()
+		default:
+			t.printLog(GQL_UNKNOWN, message)
 		}
 	}
-
-	t.printLog(GQL_INTERNAL, "ADD TO OPS")
-	t.operationsm.Lock()
-	t.operations[id] = res
-	t.operationsm.Unlock()
-
-	return res, nil
 }
 
 func (t *Ws) sendConnectionInit() error {
@@ -468,62 +388,194 @@ func (t *Ws) sendConnectionInit() error {
 	}
 
 	t.printLog(GQL_CONNECTION_INIT, msg)
-	return t.GetConn().WriteJSON(msg)
+	return t.writeJson(msg)
 }
 
-func (t *Ws) init() error {
-	t.printLog(GQL_INTERNAL, "INIT")
+func (t *Ws) Reset() {
+	t.init()
 
-	start := time.Now()
-	ctx, cancel := context.WithCancel(context.Background())
-	t.context = ctx
-	t.cancel = cancel
+	t.ResetWithErr(nil)
+}
 
-	for {
-		var err error
-		var conn WebsocketConn
-		// allow custom websocket client
-		if t.GetConn() == nil {
-			conn, err = t.WebsocketConnProvider(ctx, t.URL)
-			if err == nil {
-				t.SetConn(conn)
-			}
-		}
+func (t *Ws) ResetWithErr(err error) {
+	t.init()
 
-		if err == nil {
-			//t.conn.SetReadLimit(t.readLimit)
-			err = t.sendConnectionInit()
-		}
-		if err == nil {
-			return nil
-		}
+	t.rm.Lock()
+	defer t.rm.Unlock()
 
-		if time.Now().After(start.Add(t.RetryTimeout)) {
-			t.printLog(GQL_INTERNAL, "RetryTimeout exceeded", t.RetryTimeout)
-
-			return err
-		}
-
-		t.printLog(GQL_INTERNAL, err.Error()+"\n retry in 1 second....")
-		time.Sleep(time.Second)
+	if t.status == StatusDisconnected {
+		return
 	}
+
+	t.setStatus(StatusDisconnected)
+
+	t.printLog(GQL_INTERNAL, "RESET", err)
+
+	if err != nil {
+		t.errCh <- err
+	}
+
+	for id, op := range t.ops {
+		if op.started {
+			_ = t.stopOp(id)
+			op.started = false
+		}
+	}
+
+	t.closeConn()
+
+	atomic.StoreUint64(&t.i, 0)
+}
+
+func (t *Ws) terminate() error {
+	msg := OperationMessage{
+		Type: GQL_CONNECTION_TERMINATE,
+	}
+
+	t.printLog(GQL_CONNECTION_TERMINATE, msg)
+	return t.writeJson(msg)
+}
+
+func (t *Ws) closeConn() error {
+	_ = t.terminate()
+	err := t.conn.Close()
+	t.conn = &closedWs{}
+	t.cancel()
+
+	return err
+}
+
+func (t *Ws) Close() error {
+	t.init()
+
+	t.printLog(GQL_INTERNAL, "CLOSE")
+	t.setRunning(false)
+
+	for id := range t.ops {
+		_ = t.cancelOp(id)
+	}
+
+	return t.closeConn()
+}
+
+func (t *Ws) Request(req Request) (Response, error) {
+	t.init()
+
+	t.printLog(GQL_INTERNAL, "REQ")
+
+	id := fmt.Sprintf("%v", atomic.AddUint64(&t.i, 1))
+
+	res := &wsResponse{
+		Request: req,
+		close: func() error {
+			t.printLog(GQL_INTERNAL, "CLOSE RES")
+			return t.cancelOp(id)
+		},
+		ch: make(chan OperationResponse),
+	}
+
+	t.printLog(GQL_INTERNAL, "ADD TO OPS")
+	t.opsm.Lock()
+	t.ops[id] = res
+	t.opsm.Unlock()
+
+	if t.status == StatusReady {
+		err := t.startOp(id, res)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return res, nil
 }
 
 func (t *Ws) printLog(typ OperationMessageType, rest ...interface{}) {
-	if t.wsLog {
-		fmt.Printf("# %-20v: ", typ)
-		fmt.Println(rest...)
-	}
+	fmt.Printf("# %-20v: ", typ)
+	fmt.Println(rest...)
 }
 
-func (t *Ws) SetConn(conn WebsocketConn) {
-	t.connm.Lock()
-	defer t.connm.Unlock()
-	t._conn = conn
+func (t *Ws) registerOp(id string, op *wsResponse) {
+	t.opsm.Lock()
+	defer t.opsm.Unlock()
+
+	t.ops[id] = op
+}
+
+func (t *Ws) startOp(id string, op *wsResponse) error {
+	if op.started {
+		return nil
+	}
+
+	t.printLog(GQL_INTERNAL, "START OP")
+
+	in := OperationRequest{
+		Query:         op.Query,
+		OperationName: op.OperationName,
+		Variables:     op.Variables,
+	}
+
+	payload, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+
+	msg := OperationMessage{
+		ID:      id,
+		Type:    GQL_START,
+		Payload: payload,
+	}
+
+	t.printLog(GQL_START, msg)
+	if err := t.writeJson(msg); err != nil {
+		t.printLog(GQL_INTERNAL, "GQL_START ERR", err)
+		return err
+	}
+
+	op.started = true
+
+	go func() {
+		<-op.Context.Done()
+		t.printLog(GQL_INTERNAL, "OP CTX DONE")
+		_ = t.cancelOp(id)
+	}()
+
+	return nil
+}
+
+func (t *Ws) stopOp(id string) error {
+	t.printLog(GQL_INTERNAL, "STOP OP", id)
+
+	msg := OperationMessage{
+		ID:   id,
+		Type: GQL_STOP,
+	}
+
+	t.printLog(GQL_STOP, msg)
+	return t.writeJson(msg)
+}
+
+func (t *Ws) cancelOp(id string) error {
+	t.printLog(GQL_INTERNAL, "CANCEL OP", id)
+
+	t.opsm.Lock()
+	op, ok := t.ops[id]
+	if !ok {
+		t.opsm.Unlock()
+		return fmt.Errorf("op id %s doesn't not exist", id)
+	}
+	delete(t.ops, id)
+	t.opsm.Unlock()
+
+	op.m.Lock()
+	if op.started {
+		close(op.ch)
+		op.started = false
+	}
+	op.m.Unlock()
+
+	return t.stopOp(id)
 }
 
 func (t *Ws) GetConn() WebsocketConn {
-	t.connm.RLock()
-	defer t.connm.RUnlock()
-	return t._conn
+	return t.conn
 }

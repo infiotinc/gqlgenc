@@ -4,10 +4,33 @@ package transport
 
 import (
 	"context"
+	"fmt"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 	"time"
 )
+
+type closedWs struct{}
+
+var ErrClosedConnection = fmt.Errorf("closed connection")
+
+func (c closedWs) ReadJSON(v interface{}) error {
+	return ErrClosedConnection
+}
+
+func (c closedWs) WriteJSON(v interface{}) error {
+	return ErrClosedConnection
+}
+
+func (c closedWs) Close() error {
+	return nil
+}
+
+func (c closedWs) SetReadLimit(limit int64) {
+
+}
+
+var _ WebsocketConn = (*closedWs)(nil)
 
 // WebsocketHandler is default websocket handler implementation using https://github.com/nhooyr/websocket
 type WebsocketHandler struct {
