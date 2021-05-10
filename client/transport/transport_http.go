@@ -7,30 +7,6 @@ import (
 	"net/http"
 )
 
-type httpResponse struct {
-	or OperationResponse
-
-	calledNext bool
-}
-
-func (r *httpResponse) Next() bool {
-	defer func() {
-		r.calledNext = true
-	}()
-
-	return !r.calledNext
-}
-
-func (r httpResponse) Get() OperationResponse {
-	return r.or
-}
-
-func (r *httpResponse) Close() {}
-
-func (r httpResponse) Err() error {
-	return nil
-}
-
 type HttpRequestOption func(req *http.Request)
 
 type Http struct {
@@ -84,7 +60,5 @@ func (h *Http) Request(o Request) (Response, error) {
 		return nil, err
 	}
 
-	return &httpResponse{
-		or: opres,
-	}, nil
+	return NewSingleResponse(opres), nil
 }

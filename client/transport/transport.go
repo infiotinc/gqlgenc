@@ -21,8 +21,8 @@ type OperationRequest struct {
 }
 
 type OperationResponse struct {
-	Errors gqlerror.List    `json:"errors,omitempty"`
-	Data   *json.RawMessage `json:"data,omitempty"`
+	Errors gqlerror.List   `json:"errors,omitempty"`
+	Data   json.RawMessage `json:"data,omitempty"`
 }
 
 func (r OperationResponse) UnmarshalData(t interface{}) error {
@@ -30,7 +30,7 @@ func (r OperationResponse) UnmarshalData(t interface{}) error {
 		return nil
 	}
 
-	return json.Unmarshal(*r.Data, t)
+	return json.Unmarshal(r.Data, t)
 }
 
 type Request struct {
@@ -50,5 +50,5 @@ type Response interface {
 }
 
 type Transport interface {
-	Request(o Request) (Response, error)
+	Request(req Request) (Response, error)
 }

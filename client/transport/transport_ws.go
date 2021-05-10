@@ -9,6 +9,8 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"io"
 	"nhooyr.io/websocket"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -73,38 +75,10 @@ type ConnOptions struct {
 }
 
 type wsResponse struct {
-	Request
-	ch    chan OperationResponse
-	close func() error
-
-	cor     OperationResponse
-	err     error
-	started bool
-	m       sync.Mutex
-}
-
-func (r *wsResponse) Next() bool {
-	if r.err != nil {
-		return false
-	}
-
-	or, ok := <-r.ch
-	r.cor = or
-	return ok
-}
-
-func (r *wsResponse) Get() OperationResponse {
-	return r.cor
-}
-
-func (r *wsResponse) Close() {
-	if r.close != nil {
-		r.err = r.close()
-	}
-}
-
-func (r *wsResponse) Err() error {
-	return r.err
+	*ChanResponse
+	Context          context.Context
+	OperationRequest OperationRequest
+	started          bool
 }
 
 type WebsocketConnProvider func(ctx context.Context, URL string) (WebsocketConn, error)
@@ -155,6 +129,7 @@ type Ws struct {
 	errCh chan error
 	i     uint64
 	rm    sync.Mutex
+	log   bool
 }
 
 func (t *Ws) init() {
@@ -168,6 +143,8 @@ func (t *Ws) init() {
 		if t.WebsocketConnProvider == nil {
 			t.WebsocketConnProvider = DefaultWebsocketConnProvider(30 * time.Second)
 		}
+
+		t.log, _ = strconv.ParseBool(os.Getenv("GQLGENC_WS_LOG"))
 	})
 }
 
@@ -361,11 +338,7 @@ func (t *Ws) run() {
 			if err != nil {
 				out.Errors = append(out.Errors, gqlerror.WrapPath(nil, err))
 			}
-			op.m.Lock()
-			if op.started {
-				op.ch <- out
-			}
-			op.m.Unlock()
+			op.Send(out)
 		default:
 			t.printLog(GQL_UNKNOWN, message)
 		}
@@ -422,7 +395,7 @@ func (t *Ws) ResetWithErr(err error) {
 		}
 	}
 
-	t.closeConn()
+	_ = t.closeConn()
 
 	atomic.StoreUint64(&t.i, 0)
 }
@@ -466,12 +439,18 @@ func (t *Ws) Request(req Request) (Response, error) {
 	id := fmt.Sprintf("%v", atomic.AddUint64(&t.i, 1))
 
 	res := &wsResponse{
-		Request: req,
-		close: func() error {
-			t.printLog(GQL_INTERNAL, "CLOSE RES")
-			return t.cancelOp(id)
+		Context: req.Context,
+		OperationRequest: OperationRequest{
+			Query:         req.Query,
+			OperationName: req.OperationName,
+			Variables:     req.Variables,
 		},
-		ch: make(chan OperationResponse),
+		ChanResponse: NewChanResponse(
+			func() error {
+				t.printLog(GQL_INTERNAL, "CLOSE RES")
+				return t.cancelOp(id)
+			},
+		),
 	}
 
 	t.printLog(GQL_INTERNAL, "ADD TO OPS")
@@ -490,8 +469,10 @@ func (t *Ws) Request(req Request) (Response, error) {
 }
 
 func (t *Ws) printLog(typ OperationMessageType, rest ...interface{}) {
-	fmt.Printf("# %-20v: ", typ)
-	fmt.Println(rest...)
+	if t.log {
+		fmt.Printf("# %-20v: ", typ)
+		fmt.Println(rest...)
+	}
 }
 
 func (t *Ws) registerOp(id string, op *wsResponse) {
@@ -508,13 +489,7 @@ func (t *Ws) startOp(id string, op *wsResponse) error {
 
 	t.printLog(GQL_INTERNAL, "START OP")
 
-	in := OperationRequest{
-		Query:         op.Query,
-		OperationName: op.OperationName,
-		Variables:     op.Variables,
-	}
-
-	payload, err := json.Marshal(in)
+	payload, err := json.Marshal(op.OperationRequest)
 	if err != nil {
 		return err
 	}
@@ -566,12 +541,7 @@ func (t *Ws) cancelOp(id string) error {
 	delete(t.ops, id)
 	t.opsm.Unlock()
 
-	op.m.Lock()
-	if op.started {
-		close(op.ch)
-		op.started = false
-	}
-	op.m.Unlock()
+	op.CloseCh()
 
 	return t.stopOp(id)
 }

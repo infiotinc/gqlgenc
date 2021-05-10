@@ -59,7 +59,7 @@ func wstr(ctx context.Context, u string) *transport.Ws {
 }
 
 func cwstr(ctx context.Context, u string, newWebsocketConn transport.WebsocketConnProvider) *transport.Ws {
-	_ = os.Setenv("WS_LOG", "1")
+	_ = os.Setenv("GQLGENC_WS_LOG", "1")
 
 	if strings.HasPrefix(u, "http") {
 		u = "ws" + strings.TrimPrefix(u, "http")
