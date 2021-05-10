@@ -148,3 +148,6 @@ gql := &graph.Client{
 gql.GetRoom(...)
 ```
 
+## Release
+
+    TAG=v0.0.x make tag

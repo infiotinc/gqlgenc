@@ -6,3 +6,7 @@ example-gqlgenc:
 
 example-test:
 	cd example && go test -v -count=1 ./...
+
+tag:
+	git tag -a ${TAG} -m ${TAG}
+	git push origin ${TAG}
