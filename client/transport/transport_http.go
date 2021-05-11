@@ -3,14 +3,14 @@ package transport
 import (
 	"bytes"
 	"encoding/json"
-	"io"
+	"io/ioutil"
 	"net/http"
 )
 
 type HttpRequestOption func(req *http.Request)
 
 type Http struct {
-	URL            string
+	URL string
 	// Client defaults to http.DefaultClient
 	Client         *http.Client
 	RequestOptions []HttpRequestOption
@@ -49,7 +49,7 @@ func (h *Http) Request(o Request) (Response, error) {
 	}
 	defer res.Body.Close()
 
-	data, err := io.ReadAll(res.Body)
+	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
