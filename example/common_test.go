@@ -66,11 +66,10 @@ func cwstr(ctx context.Context, u string, newWebsocketConn transport.WebsocketCo
 	}
 
 	tr := &transport.Ws{
-		Context:               ctx,
 		URL:                   u,
 		WebsocketConnProvider: newWebsocketConn,
 	}
-	errCh := tr.Start()
+	errCh := tr.Start(ctx)
 	go func() {
 		for err := range errCh {
 			log.Println("Ws Transport error: ", err)

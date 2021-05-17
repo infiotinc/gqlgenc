@@ -108,14 +108,12 @@ func (s Status) String() string {
 // Start() must be called to initiate the websocket connection
 // Close() must be called to dispose of the transport
 type Ws struct {
-	Context context.Context
-	URL     string
+	URL string
 	// WebsocketConnProvider defaults to DefaultWebsocketConnProvider(30 * time.Second)
 	WebsocketConnProvider WebsocketConnProvider
 	// ConnectionParams will be sent during the connection init
 	ConnectionParams interface{}
 
-	ctx     context.Context
 	cancel  context.CancelFunc
 	conn    WebsocketConn
 	running bool
@@ -178,12 +176,13 @@ func (t *Ws) waitFor(s Status) {
 }
 
 func (t *Ws) setRunning(v bool) {
-	t.printLog(GQL_INTERNAL, "SET SET ISRUNNING", v)
+	t.printLog(GQL_INTERNAL, "SET ISRUNNING", v)
 	t.running = v
 	if v == false {
 		t.setStatus(StatusDisconnected)
+	} else {
+		t.sc.Broadcast()
 	}
-	t.sc.Broadcast()
 }
 
 func (t *Ws) setStatus(s Status) {
@@ -196,7 +195,7 @@ func (t *Ws) setStatus(s Status) {
 	t.sc.Broadcast()
 }
 
-func (t *Ws) Start() <-chan error {
+func (t *Ws) Start(ctx context.Context) <-chan error {
 	t.init()
 
 	if t.running {
@@ -205,7 +204,7 @@ func (t *Ws) Start() <-chan error {
 
 	t.errCh = make(chan error)
 
-	go t.run()
+	go t.run(ctx)
 
 	return t.errCh
 }
@@ -218,20 +217,22 @@ func (t *Ws) writeJson(v interface{}) error {
 	return t.conn.WriteJSON(v)
 }
 
-func (t *Ws) run() {
+func (t *Ws) run(inctx context.Context) {
 	defer func() {
+		t.setRunning(false)
 		close(t.errCh)
 	}()
 
 	t.setRunning(true)
 
+	ctx := inctx
 	for {
 		t.printLog(GQL_INTERNAL, "STATUS", t.status)
 
 		select {
-		case <-t.Context.Done():
+		case <-inctx.Done():
 			if !t.running { // Unexpected cancel
-				err := t.ctx.Err()
+				err := inctx.Err()
 				t.printLog(GQL_INTERNAL, "CTX DONE", err)
 				t.errCh <- err
 			}
@@ -241,13 +242,15 @@ func (t *Ws) run() {
 		}
 
 		if t.status == StatusDisconnected {
+			t.printLog(GQL_INTERNAL, "CANCEL PREV CTX")
+
 			if t.cancel != nil {
 				t.cancel()
 			}
-			t.ctx, t.cancel = context.WithCancel(t.Context)
+			ctx, t.cancel = context.WithCancel(inctx)
 
 			t.printLog(GQL_INTERNAL, "CONNECTING")
-			conn, err := t.WebsocketConnProvider(t.ctx, t.URL)
+			conn, err := t.WebsocketConnProvider(ctx, t.URL)
 			if err != nil {
 				t.printLog(GQL_INTERNAL, "WebsocketConnProvider ERR", err)
 
@@ -281,7 +284,8 @@ func (t *Ws) run() {
 
 			t.printLog(GQL_INTERNAL, "READ JSON ERR", err)
 
-			if err == io.EOF || strings.Contains(err.Error(), "EOF") {
+			if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "EOF") {
+				t.printLog(GQL_INTERNAL, "EOF")
 				t.ResetWithErr(err)
 				continue
 			}
@@ -292,6 +296,7 @@ func (t *Ws) run() {
 				return
 			}
 			if closeStatus != -1 {
+				t.printLog(GQL_INTERNAL, "CLOSE STATUS != -1")
 				t.ResetWithErr(err)
 				continue
 			}
@@ -415,6 +420,8 @@ func (t *Ws) closeConn() error {
 	t.conn = &closedWs{}
 	t.cancel()
 
+	t.printLog(GQL_INTERNAL, "DONE CLOSE CONN", err)
+
 	return err
 }
 
@@ -422,7 +429,6 @@ func (t *Ws) Close() error {
 	t.init()
 
 	t.printLog(GQL_INTERNAL, "CLOSE")
-	t.setRunning(false)
 
 	for id := range t.ops {
 		_ = t.cancelOp(id)

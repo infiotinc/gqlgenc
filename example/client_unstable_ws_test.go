@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/infiotinc/gqlgenc/client"
 	"github.com/infiotinc/gqlgenc/client/transport"
-	"math/rand"
 	"net/http/httptest"
 	"nhooyr.io/websocket"
 	"testing"
@@ -39,8 +38,6 @@ func (u *unstableWebsocketConn) SetReadLimit(limit int64) {
 }
 
 func newUnstableConn(ctx context.Context, URL string) (transport.WebsocketConn, error) {
-	rand.Seed(time.Now().UTC().UnixNano())
-
 	wsconn, err := transport.DefaultWebsocketConnProvider(time.Second)(ctx, URL)
 	if err != nil {
 		return nil, err

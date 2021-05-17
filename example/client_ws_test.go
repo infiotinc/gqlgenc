@@ -6,6 +6,7 @@ import (
 	"github.com/infiotinc/gqlgenc/client/transport"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func wscli(ctx context.Context, newWebsocketConn transport.WebsocketConnProvider) (*client.Client, func()) {
@@ -34,4 +35,28 @@ func TestRawWSSubscription(t *testing.T) {
 	defer teardown()
 
 	runAssertSub(t, ctx, cli)
+}
+
+func TestWSCtxCancel1(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cli, teardown := wscli(ctx, nil)
+
+	runAssertQuery(t, ctx, cli)
+
+	teardown()
+	time.Sleep(time.Second)
+	cancel()
+}
+
+func TestWSCtxCancel2(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cli, teardown := wscli(ctx, nil)
+
+	runAssertQuery(t, ctx, cli)
+
+	cancel()
+	time.Sleep(time.Second)
+	teardown()
 }
