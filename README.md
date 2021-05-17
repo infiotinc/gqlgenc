@@ -37,17 +37,14 @@ import (
 )
 
 func main() {
-    ctx := context.Background()
-
     wstr := &transport.Ws{
-        Context: ctx,
-        URL:     "ws://example.org/graphql",
+        URL: "wss://example.org/graphql",
     }
-    wstr.Start()
+    wstr.Start(context.Background())
     defer wstr.Close()
 
     httptr := &transport.Http{
-        URL: "http://example.org/graphql",
+        URL: "https://example.org/graphql",
     }
 
     tr := transport.SplitSubscription(wstr, httptr)
