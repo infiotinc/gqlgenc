@@ -5,6 +5,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"example/graph/generated"
 	"example/graph/model"
 	"fmt"
@@ -15,6 +16,10 @@ func (r *mutationResolver) Post(ctx context.Context, text string, username strin
 }
 
 func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom, error) {
+	if name == "error" {
+		return nil, errors.New("that's an invalid room")
+	}
+
 	return &model.Chatroom{
 		Name:     name,
 		Messages: nil,

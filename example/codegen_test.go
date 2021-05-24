@@ -45,7 +45,7 @@ func TestQuery(t *testing.T) {
 		Client: cli,
 	}
 
-	room, err := gql.GetRoom(ctx)
+	room, err := gql.GetRoom(ctx, "test")
 	if err != nil {
 		t.Fatal(err)
 	}

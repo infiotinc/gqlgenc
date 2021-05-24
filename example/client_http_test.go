@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/infiotinc/gqlgenc/client"
 	"github.com/infiotinc/gqlgenc/client/transport"
+	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
 )
@@ -21,4 +22,15 @@ func TestRawHttpQuery(t *testing.T) {
 	defer teardown()
 
 	runAssertQuery(t, ctx, cli)
+}
+
+func TestRawHttpQueryError(t *testing.T) {
+	ctx := context.Background()
+
+	cli, teardown := httpcli(ctx)
+	defer teardown()
+
+	var opres RoomQueryResponse
+	err := cli.Query(ctx, "", roomQuery, map[string]interface{}{"name": "error"}, &opres)
+	assert.EqualError(t, err, "input: room that's an invalid room\n")
 }

@@ -1,5 +1,5 @@
-query GetRoom {
-    room(name: "test") {
+query GetRoom($name: String!) {
+    room(name: $name) {
         name
     }
 }

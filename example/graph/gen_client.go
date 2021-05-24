@@ -32,15 +32,17 @@ type SubscribeMessageAdded struct {
 	} "json:\"messageAdded\" graphql:\"messageAdded\""
 }
 
-const GetRoomDocument = `query GetRoom {
-	room(name: "test") {
+const GetRoomDocument = `query GetRoom ($name: String!) {
+	room(name: $name) {
 		name
 	}
 }
 `
 
-func (c *Client) GetRoom(ctx context.Context) (*GetRoom, error) {
-	vars := map[string]interface{}{}
+func (c *Client) GetRoom(ctx context.Context, name string) (*GetRoom, error) {
+	vars := map[string]interface{}{
+		"name": name,
+	}
 
 	var res GetRoom
 	if err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &res); err != nil {

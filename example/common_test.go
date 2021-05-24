@@ -23,8 +23,8 @@ import (
 )
 
 const roomQuery = `
-query query {
-	room(name: "test") {
+query query($name: String!) {
+	room(name: $name) {
 		name
 	}
 }
@@ -138,7 +138,7 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client) {
 	fmt.Println("ASSERT QUERY")
 	var opres RoomQueryResponse
-	err := cli.Query(ctx, "", roomQuery, nil, &opres)
+	err := cli.Query(ctx, "", roomQuery, map[string]interface{}{"name": "test"}, &opres)
 	if err != nil {
 		t.Fatal(err)
 	}
