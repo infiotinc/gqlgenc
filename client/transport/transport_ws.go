@@ -308,6 +308,7 @@ func (t *Ws) run(inctx context.Context) {
 			t.printLog(GQL_CONNECTION_ACK, message)
 			t.setStatus(StatusReady)
 
+			t.opsm.Lock()
 			for id, op := range t.ops {
 				if err := t.startOp(id, op); err != nil {
 					t.printLog(GQL_INTERNAL, "ACK: START OP FAILED")
@@ -315,6 +316,7 @@ func (t *Ws) run(inctx context.Context) {
 					t.errCh <- err
 				}
 			}
+			t.opsm.Unlock()
 		case GQL_CONNECTION_KEEP_ALIVE:
 			t.printLog(GQL_CONNECTION_KEEP_ALIVE, message)
 		case GQL_CONNECTION_ERROR:
@@ -467,7 +469,7 @@ func (t *Ws) Request(req Request) (Response, error) {
 	if t.status == StatusReady {
 		err := t.startOp(id, res)
 		if err != nil {
-			return nil, err
+			return res, err
 		}
 	}
 
@@ -513,12 +515,6 @@ func (t *Ws) startOp(id string, op *wsResponse) error {
 	}
 
 	op.started = true
-
-	go func() {
-		<-op.Context.Done()
-		t.printLog(GQL_INTERNAL, "OP CTX DONE")
-		_ = t.cancelOp(id)
-	}()
 
 	return nil
 }

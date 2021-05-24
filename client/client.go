@@ -73,7 +73,7 @@ func (c *Client) Subscription(ctx context.Context, operationName string, query s
 		Variables:     variables,
 	})
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
 	go func() {
