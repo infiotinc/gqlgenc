@@ -31,6 +31,6 @@ func TestRawHttpQueryError(t *testing.T) {
 	defer teardown()
 
 	var opres RoomQueryResponse
-	err := cli.Query(ctx, "", roomQuery, map[string]interface{}{"name": "error"}, &opres)
+	err := cli.Query(ctx, "", RoomQuery, map[string]interface{}{"name": "error"}, &opres)
 	assert.EqualError(t, err, "input: room that's an invalid room\n")
 }

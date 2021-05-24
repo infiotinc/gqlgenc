@@ -47,6 +47,7 @@ type Response interface {
 	Get() OperationResponse
 	Close()
 	Err() error
+	Done() <-chan struct{}
 }
 
 type Transport interface {

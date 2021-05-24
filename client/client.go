@@ -24,8 +24,11 @@ func (c *Client) do(ctx context.Context, operation transport.Operation, operatio
 	defer res.Close()
 
 	go func() {
-		<-ctx.Done()
-		res.Close()
+		select {
+		case <-ctx.Done():
+			res.Close()
+		case <-res.Done():
+		}
 	}()
 
 	ok := res.Next()
@@ -74,8 +77,11 @@ func (c *Client) Subscription(ctx context.Context, operationName string, query s
 	}
 
 	go func() {
-		<-ctx.Done()
-		res.Close()
+		select {
+		case <-ctx.Done():
+			res.Close()
+		case <-res.Done():
+		}
 	}()
 
 	return res, nil

@@ -7,6 +7,9 @@ example-gqlgenc:
 example-test:
 	cd example && go test -v -count=1 ./...
 
+example-run-memleak:
+	cd example && go run ./cmd/memleak.go
+
 tag:
 	git tag -a ${TAG} -m ${TAG}
 	git push origin ${TAG}

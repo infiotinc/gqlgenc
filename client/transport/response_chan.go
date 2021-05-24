@@ -10,11 +10,13 @@ type ChanResponse struct {
 
 	cor OperationResponse
 	m   sync.Mutex
+	dc  chan struct{}
 }
 
 func NewChanResponse(onClose func() error) *ChanResponse {
 	return &ChanResponse{
 		ch:    make(chan OperationResponse),
+		dc:    make(chan struct{}),
 		close: onClose,
 	}
 }
@@ -40,18 +42,23 @@ func (r *ChanResponse) Close() {
 }
 
 func (r *ChanResponse) CloseCh() {
+	r.m.Lock()
 	if r.closed {
 		return
 	}
 
-	r.m.Lock()
 	close(r.ch)
+	close(r.dc)
 	r.closed = true
 	r.m.Unlock()
 }
 
 func (r *ChanResponse) Err() error {
 	return r.err
+}
+
+func (r *ChanResponse) Done() <-chan struct{} {
+	return r.dc
 }
 
 func (r *ChanResponse) Send(op OperationResponse) {

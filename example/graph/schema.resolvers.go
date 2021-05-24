@@ -9,6 +9,8 @@ import (
 	"example/graph/generated"
 	"example/graph/model"
 	"fmt"
+	"os"
+	"strconv"
 )
 
 func (r *mutationResolver) Post(ctx context.Context, text string, username string, roomName string) (*model.Message, error) {
@@ -28,15 +30,22 @@ func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom,
 
 func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error) {
 	ch := make(chan *model.Message)
+	debug, _ := strconv.ParseBool(os.Getenv("GQLGENC_WS_LOG"))
 
-	fmt.Println("MESSAGE ADDED")
+	debugPrint := func(a ...interface{}) {
+		if debug {
+			fmt.Println(a...)
+		}
+	}
+
+	debugPrint("MESSAGE ADDED")
 
 	go func() {
 		i := 0
 		for {
 			if i == 3 {
 				close(ch)
-				fmt.Println("DONE MESSAGE ADDED")
+				debugPrint("DONE MESSAGE ADDED")
 				return
 			}
 
@@ -47,10 +56,10 @@ func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string
 			select {
 			case <-ctx.Done():
 				close(ch)
-				fmt.Println("DONE ctx")
+				debugPrint("DONE ctx")
 				return
 			case ch <- msg:
-				fmt.Println("SEND")
+				debugPrint("SEND")
 				i++
 			}
 		}

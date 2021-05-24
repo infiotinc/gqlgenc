@@ -22,34 +22,6 @@ import (
 	"time"
 )
 
-const roomQuery = `
-query query($name: String!) {
-	room(name: $name) {
-		name
-	}
-}
-`
-
-type RoomQueryResponse struct {
-	Room struct {
-		Name string `json:"name"`
-	} `json:"room"`
-}
-
-const messagesSub = `
-subscription query{
-	messageAdded(roomName: "test") {
-		id
-	}
-}
-`
-
-type MessagesSubResponse struct {
-	MessageAdded struct {
-		ID string `json:"id"`
-	} `json:"messageAdded"`
-}
-
 func wstr(ctx context.Context, u string) *transport.Ws {
 	return cwstr(
 		ctx,
@@ -138,7 +110,7 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client) {
 	fmt.Println("ASSERT QUERY")
 	var opres RoomQueryResponse
-	err := cli.Query(ctx, "", roomQuery, map[string]interface{}{"name": "test"}, &opres)
+	err := cli.Query(ctx, "", RoomQuery, map[string]interface{}{"name": "test"}, &opres)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +120,7 @@ func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client) {
 
 func runAssertSub(t *testing.T, ctx context.Context, cli *client.Client) {
 	fmt.Println("ASSERT SUB")
-	res, err := cli.Subscription(ctx, "", messagesSub, nil)
+	res, err := cli.Subscription(ctx, "", MessagesSub, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
