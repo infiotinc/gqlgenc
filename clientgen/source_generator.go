@@ -165,7 +165,6 @@ func (r *SourceGenerator) NewResponseField(selection ast.Selection) *ResponseFie
 
 		tags := []string{
 			fmt.Sprintf(`json:"%s"`, selection.Alias),
-			fmt.Sprintf(`graphql:"%s"`, selection.Alias),
 		}
 
 		return &ResponseField{

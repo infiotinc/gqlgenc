@@ -52,3 +52,21 @@ func TestQuery(t *testing.T) {
 
 	assert.Equal(t, "test", room.Room.Name)
 }
+
+func TestQueryCustomType(t *testing.T) {
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &graph.Client{
+		Client: cli,
+	}
+
+	room, err := gql.GetRoomCustom(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "Room: test", room.String())
+}

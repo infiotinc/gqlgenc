@@ -4,6 +4,12 @@ query GetRoom($name: String!) {
     }
 }
 
+query GetRoomCustom($name: String!) {
+    room(name: $name) {
+        name
+    }
+}
+
 subscription SubscribeMessageAdded {
     messageAdded(roomName: "test") {
         id

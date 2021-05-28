@@ -6,9 +6,9 @@ import (
 	"go/types"
 
 	"github.com/99designs/gqlgen/codegen/templates"
+	"github.com/infiotinc/gqlgenc/config"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/formatter"
-	"github.com/infiotinc/gqlgenc/config"
 )
 
 type Source struct {
@@ -36,13 +36,14 @@ func (s *Source) Fragments() ([]*Fragment, error) {
 	fragments := make([]*Fragment, 0, len(s.queryDocument.Fragments))
 	for _, fragment := range s.queryDocument.Fragments {
 		responseFields := s.sourceGenerator.NewResponseFields(fragment.SelectionSet)
-		if s.sourceGenerator.cfg.Models.Exists(fragment.Name) {
-			fmt.Printf("%s is already declared\n", fragment.Name)
+		name := fragment.Name
+		if s.sourceGenerator.cfg.Models.Exists(name) {
+			fmt.Printf("%s is already declared: %v\n", name, s.sourceGenerator.cfg.Models[name].Model)
 			continue
 		}
 
 		fragment := &Fragment{
-			Name: fragment.Name,
+			Name: name,
 			Type: responseFields.StructType(),
 		}
 
@@ -53,7 +54,7 @@ func (s *Source) Fragments() ([]*Fragment, error) {
 		name := fragment.Name
 		s.sourceGenerator.cfg.Models.Add(
 			name,
-			fmt.Sprintf("%s.%s", s.sourceGenerator.client.Pkg(), templates.ToGo(name)),
+			fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), templates.ToGo(name)),
 		)
 	}
 
@@ -62,18 +63,18 @@ func (s *Source) Fragments() ([]*Fragment, error) {
 
 type Operation struct {
 	Name                string
-	ResponseStructName  string
+	ResponseType        types.Type
 	Operation           string
 	OperationType       string
 	Args                []*Argument
 	VariableDefinitions ast.VariableDefinitionList
 }
 
-func NewOperation(operation *ast.OperationDefinition, queryDocument *ast.QueryDocument, args []*Argument, generateConfig *config.GenerateConfig) *Operation {
+func NewOperation(operation *ast.OperationDefinition, queryDocument *ast.QueryDocument, args []*Argument, srcgen *SourceGenerator) *Operation {
 	return &Operation{
 		Name:                operation.Name,
 		OperationType:       string(operation.Operation),
-		ResponseStructName:  getResponseStructName(operation, generateConfig),
+		ResponseType:        srcgen.Type(operation.Name),
 		Operation:           queryString(queryDocument),
 		Args:                args,
 		VariableDefinitions: operation.VariableDefinitions,
@@ -92,7 +93,7 @@ func (s *Source) Operations(queryDocuments []*ast.QueryDocument) []*Operation {
 			operation,
 			queryDocument,
 			args,
-			s.generateConfig,
+			s.sourceGenerator,
 		))
 	}
 
@@ -137,7 +138,7 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 		responseFields := s.sourceGenerator.NewResponseFields(operation.SelectionSet)
 		name := getResponseStructName(operation, s.generateConfig)
 		if s.sourceGenerator.cfg.Models.Exists(name) {
-			fmt.Printf("%s is already declared\n", name)
+			fmt.Printf("%s is already declared: %v\n", name, s.sourceGenerator.cfg.Models[name].Model)
 			continue
 		}
 		operationResponses = append(operationResponses, &OperationResponse{
@@ -150,7 +151,7 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 		name := operationResponse.Name
 		s.sourceGenerator.cfg.Models.Add(
 			name,
-			fmt.Sprintf("%s.%s", s.sourceGenerator.client.Pkg(), templates.ToGo(name)),
+			fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), templates.ToGo(name)),
 		)
 	}
 

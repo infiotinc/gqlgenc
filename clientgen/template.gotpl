@@ -10,7 +10,6 @@
 	{{ reserveImport "path" }}
 	{{ reserveImport "time" }}
 
-
 	{{ reserveImport "github.com/infiotinc/gqlgenc/client" }}
 
 	type Client struct {
@@ -42,7 +41,7 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
 	{{- if $.GenerateClient }}
         {{- if eq $model.OperationType "subscription" }}
             type Message{{ $model.Name|go }} struct {
-                Data  *{{ $model.ResponseStructName | go }}
+                Data  *{{ $model.ResponseType | ref }}
                 Error error
             }
 
@@ -52,7 +51,6 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
                 }
-
 
                 sub, err := c.Client.Subscription(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars)
                 if err != nil {
@@ -65,7 +63,7 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                     for sub.Next() {
                         res := sub.Get()
 
-                        var datares MessageSubscribeMessageAdded
+                        var datares Message{{ $model.Name|go }}
                         if len(res.Errors) > 0 {
                             datares.Error = res.Errors
                         }
@@ -88,14 +86,14 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                 return ch, nil
             }
         {{- else}}
-            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $model.ResponseStructName | go }}, error) {
+            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $model.ResponseType | ref }}, error) {
                 vars := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
                 }
 
-                var res {{ $model.ResponseStructName|go }}
+                var res {{ $model.ResponseType | ref }}
                 if err := c.Client.{{ $model.OperationType|ucFirst }}(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars, &res); err != nil {
                     return nil, err
                 }

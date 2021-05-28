@@ -11,7 +11,7 @@
 | https://github.com/shurcooL/graphql         | ❌      | ❌                      |
 | https://github.com/Yamashou/gqlgenc         | ✅      | ❌                      |
 | https://github.com/hasura/go-graphql-client | ❌      | ✅                      |
-| ✨https://github.com/infiotinc/gqlgenc✨     | ✅      | ✅                      |
+| ✨[https://github.com/infiotinc/gqlgenc](https://github.com/infiotinc/gqlgenc)✨| ✅ | ✅ |
 
 ## GQL Client
 

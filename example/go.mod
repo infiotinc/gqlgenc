@@ -2,7 +2,7 @@ module example
 
 replace github.com/infiotinc/gqlgenc => ../
 
-go 1.16
+go 1.15
 
 require (
 	github.com/99designs/gqlgen v0.13.0

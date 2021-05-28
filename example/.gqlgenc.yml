@@ -9,6 +9,8 @@ models:
     model: github.com/99designs/gqlgen/graphql.Int64
   DateTime:
     model: github.com/99designs/gqlgen/graphql.Time
+  GetRoomCustom:
+    model: example/somelib.CustomRoom
 schema:
   - schema.graphql
 query:

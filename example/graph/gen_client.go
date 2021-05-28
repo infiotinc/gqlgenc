@@ -4,6 +4,7 @@ package graph
 
 import (
 	"context"
+	"example/somelib"
 
 	"github.com/infiotinc/gqlgenc/client"
 )
@@ -23,13 +24,13 @@ type Subscription struct {
 }
 type GetRoom struct {
 	Room *struct {
-		Name string "json:\"name\" graphql:\"name\""
-	} "json:\"room\" graphql:\"room\""
+		Name string "json:\"name\""
+	} "json:\"room\""
 }
 type SubscribeMessageAdded struct {
 	MessageAdded struct {
-		ID string "json:\"id\" graphql:\"id\""
-	} "json:\"messageAdded\" graphql:\"messageAdded\""
+		ID string "json:\"id\""
+	} "json:\"messageAdded\""
 }
 
 const GetRoomDocument = `query GetRoom ($name: String!) {
@@ -46,6 +47,26 @@ func (c *Client) GetRoom(ctx context.Context, name string) (*GetRoom, error) {
 
 	var res GetRoom
 	if err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+const GetRoomCustomDocument = `query GetRoomCustom ($name: String!) {
+	room(name: $name) {
+		name
+	}
+}
+`
+
+func (c *Client) GetRoomCustom(ctx context.Context, name string) (*somelib.CustomRoom, error) {
+	vars := map[string]interface{}{
+		"name": name,
+	}
+
+	var res somelib.CustomRoom
+	if err := c.Client.Query(ctx, "GetRoomCustom", GetRoomCustomDocument, vars, &res); err != nil {
 		return nil, err
 	}
 
