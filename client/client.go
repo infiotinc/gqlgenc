@@ -6,83 +6,96 @@ import (
 	"github.com/infiotinc/gqlgenc/client/transport"
 )
 
-type Client struct {
-	Transport transport.Transport
+type extensions struct {
+	aroundRequest []AroundRequest
 }
 
-func (c *Client) do(ctx context.Context, operation transport.Operation, operationName string, query string, variables map[string]interface{}, t interface{}) error {
-	res, err := c.Transport.Request(transport.Request{
+func (es *extensions) Use(e Extension) {
+	if a, ok := e.(AroundRequest); ok {
+		es.aroundRequest = append(es.aroundRequest, a)
+	}
+}
+
+func (es *extensions) RunAroundRequest(req *transport.Request, h RequestHandler) transport.Response {
+	run := h
+
+	for _, _e := range es.aroundRequest {
+		e := _e // Local ref
+		next := run // Local ref
+		run = func(req *transport.Request) transport.Response {
+			return e.AroundRequest(req, next)
+		}
+	}
+
+	return run(req)
+}
+
+type Client struct {
+	Transport transport.Transport
+
+	extensions
+}
+
+func (c *Client) doSingle(
+	ctx context.Context,
+	operation transport.Operation,
+	operationName string,
+	query string,
+	variables map[string]interface{},
+	t interface{},
+) (transport.OperationResponse, error) {
+	res := c.Do(&transport.Request{
 		Context:       ctx,
 		Operation:     operation,
 		Query:         query,
 		OperationName: operationName,
 		Variables:     variables,
 	})
-	if err != nil {
-		return err
-	}
 	defer res.Close()
 
-	go func() {
-		select {
-		case <-ctx.Done():
-			res.Close()
-		case <-res.Done():
-		}
-	}()
-
-	ok := res.Next()
-	if !ok {
+	if !res.Next() {
 		if err := res.Err(); err != nil {
-			return err
+			return transport.OperationResponse{}, err
 		}
 
-		return fmt.Errorf("no response")
+		return transport.OperationResponse{}, fmt.Errorf("no response")
 	}
 
 	opres := res.Get()
-	err = opres.UnmarshalData(t)
+
+	err := opres.UnmarshalData(t)
 
 	if len(opres.Errors) > 0 {
-		return opres.Errors
+		return opres, opres.Errors
 	}
 
-	return err
+	return opres, err
+}
+
+func (c *Client) Do(req *transport.Request) transport.Response {
+	return c.RunAroundRequest(req, c.Transport.Request)
 }
 
 // Query runs a query
 // operationName is optional
-func (c *Client) Query(ctx context.Context, operationName string, query string, variables map[string]interface{}, t interface{}) error {
-	return c.do(ctx, transport.Query, operationName, query, variables, t)
+func (c *Client) Query(ctx context.Context, operationName string, query string, variables map[string]interface{}, t interface{}) (transport.OperationResponse, error) {
+	return c.doSingle(ctx, transport.Query, operationName, query, variables, t)
 }
 
 // Mutation runs a mutation
 // operationName is optional
-func (c *Client) Mutation(ctx context.Context, operationName string, query string, variables map[string]interface{}, t interface{}) error {
-	return c.do(ctx, transport.Mutation, operationName, query, variables, t)
+func (c *Client) Mutation(ctx context.Context, operationName string, query string, variables map[string]interface{}, t interface{}) (transport.OperationResponse, error) {
+	return c.doSingle(ctx, transport.Mutation, operationName, query, variables, t)
 }
 
 // Subscription starts a GQL subscription
 // operationName is optional
-func (c *Client) Subscription(ctx context.Context, operationName string, query string, variables map[string]interface{}) (transport.Response, error) {
-	res, err := c.Transport.Request(transport.Request{
+func (c *Client) Subscription(ctx context.Context, operationName string, query string, variables map[string]interface{}) transport.Response {
+	return c.Do(&transport.Request{
 		Context:       ctx,
 		Operation:     transport.Subscription,
 		Query:         query,
 		OperationName: operationName,
 		Variables:     variables,
 	})
-	if err != nil {
-		return res, err
-	}
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			res.Close()
-		case <-res.Done():
-		}
-	}()
-
-	return res, nil
 }

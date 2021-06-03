@@ -52,16 +52,13 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                 {{- end }}
                 }
 
-                sub, err := c.Client.Subscription(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars)
-                if err != nil {
-            		return nil, err
-                }
+                res := c.Client.Subscription(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars)
 
                 ch := make(chan Message{{ $model.Name|go }})
 
                 go func() {
-                    for sub.Next() {
-                        res := sub.Get()
+                    for res.Next() {
+                        res := res.Get()
 
                         var datares Message{{ $model.Name|go }}
                         if len(res.Errors) > 0 {
@@ -69,13 +66,14 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                         }
 
                         err := res.UnmarshalData(&datares.Data)
-                        if datares.Error == nil && err != nil {
+                        if err != nil && datares.Error == nil {
                             datares.Error = err
                         }
 
                         ch <- datares
                     }
-                    if err := sub.Err(); err != nil {
+
+                    if err := res.Err(); err != nil {
                         ch <- Message{{ $model.Name|go }} {
                             Error: err,
                         }
@@ -94,7 +92,8 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                 }
 
                 var res {{ $model.ResponseType | ref }}
-                if err := c.Client.{{ $model.OperationType|ucFirst }}(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars, &res); err != nil {
+                _, err := c.Client.{{ $model.OperationType|ucFirst }}(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars, &res)
+                if err != nil {
                     return nil, err
                 }
 

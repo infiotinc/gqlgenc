@@ -5,6 +5,7 @@ import (
 	"example/graph"
 	"example/graph/generated"
 	"fmt"
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	htransport "github.com/99designs/gqlgen/graphql/handler/transport"
@@ -62,12 +63,12 @@ func httptr(ctx context.Context, u string) *transport.Http {
 }
 
 func clifactory(ctx context.Context, trf func(server *httptest.Server) (transport.Transport, func())) (*client.Client, func()) {
-	srv := handler.New(generated.NewExecutableSchema(generated.Config{
+	h := handler.New(generated.NewExecutableSchema(generated.Config{
 		Resolvers: &graph.Resolver{},
 	}))
 
-	srv.AddTransport(htransport.POST{})
-	srv.AddTransport(htransport.Websocket{
+	h.AddTransport(htransport.POST{})
+	h.AddTransport(htransport.Websocket{
 		KeepAlivePingInterval: 500 * time.Millisecond,
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -80,13 +81,24 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 			return ctx, nil
 		},
 	})
-	srv.Use(extension.Introspection{})
+	h.Use(extension.AutomaticPersistedQuery{Cache: graphql.MapCache{}})
+	h.Use(extension.Introspection{})
 
-	httpsrv := http.NewServeMux()
-	httpsrv.Handle("/playground", playground.Handler("Playground", "/"))
-	httpsrv.Handle("/", srv)
+	h.AroundResponses(func(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
+		stats := extension.GetApqStats(ctx)
 
-	ts := httptest.NewServer(httpsrv)
+		if stats != nil {
+			graphql.RegisterExtension(ctx, "apqStats", stats)
+		}
+
+		return next(ctx)
+	})
+
+	srv := http.NewServeMux()
+	srv.Handle("/playground", playground.Handler("Playground", "/"))
+	srv.Handle("/", h)
+
+	ts := httptest.NewServer(srv)
 
 	fmt.Println("TS URL: ", ts.URL)
 
@@ -107,39 +119,49 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 		}
 }
 
-func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client) {
+type QueryAsserter func(transport.OperationResponse, RoomQueryResponse)
+
+func runAssertQuery(t *testing.T, ctx context.Context, cli *client.Client, asserters ...QueryAsserter) {
 	fmt.Println("ASSERT QUERY")
-	var opres RoomQueryResponse
-	err := cli.Query(ctx, "", RoomQuery, map[string]interface{}{"name": "test"}, &opres)
+	var data RoomQueryResponse
+	opres, err := cli.Query(ctx, "", RoomQuery, map[string]interface{}{"name": "test"}, &data)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, "test", opres.Room.Name)
+	assert.Equal(t, "test", data.Room.Name)
+
+	for _, a := range asserters {
+		a(opres, data)
+	}
 }
 
-func runAssertSub(t *testing.T, ctx context.Context, cli *client.Client) {
+type SubAsserter func(transport.OperationResponse, MessagesSubResponse)
+
+func runAssertSub(t *testing.T, ctx context.Context, cli *client.Client, asserters ...SubAsserter) {
 	fmt.Println("ASSERT SUB")
-	res, err := cli.Subscription(ctx, "", MessagesSub, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := cli.Subscription(ctx, "", MessagesSub, nil)
 
 	ids := make([]string, 0)
 
 	for res.Next() {
-		op := res.Get()
+		opres := res.Get()
 
-		var opres MessagesSubResponse
-		err := op.UnmarshalData(&opres)
+		var data MessagesSubResponse
+		err := opres.UnmarshalData(&data)
 		if err != nil {
 			t.Fatal(err)
 		}
-		ids = append(ids, opres.MessageAdded.ID)
+		ids = append(ids, data.MessageAdded.ID)
+
+		for _, a := range asserters {
+			a(opres, data)
+		}
 	}
 
-	if res.Err() != nil {
+	if err := res.Err(); err != nil {
 		t.Fatal(err)
 	}
+
 	assert.Len(t, ids, 3)
 }

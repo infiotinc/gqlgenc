@@ -14,14 +14,14 @@ func TestSingleResponse(t *testing.T) {
 
 	cli := &Client{
 		Transport: transport.Mock{
-			"query": func(req transport.Request) (transport.Response, error) {
+			"query": func(req *transport.Request) (transport.Response, error) {
 				return transport.NewSingleResponse(transport.NewMockOperationResponse("hey", nil)), nil
 			},
 		},
 	}
 
 	var res string
-	err := cli.Query(context.Background(), "", "query", nil, &res)
+	_, err := cli.Query(context.Background(), "", "query", nil, &res)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestChanResponse(t *testing.T) {
 
 	cli := &Client{
 		Transport: transport.Mock{
-			"query": func(req transport.Request) (transport.Response, error) {
+			"query": func(req *transport.Request) (transport.Response, error) {
 				res := transport.NewChanResponse(nil)
 
 				go func() {

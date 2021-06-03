@@ -46,7 +46,8 @@ func (c *Client) GetRoom(ctx context.Context, name string) (*GetRoom, error) {
 	}
 
 	var res GetRoom
-	if err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &res); err != nil {
+	_, err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &res)
+	if err != nil {
 		return nil, err
 	}
 
@@ -66,7 +67,8 @@ func (c *Client) GetRoomCustom(ctx context.Context, name string) (*somelib.Custo
 	}
 
 	var res somelib.CustomRoom
-	if err := c.Client.Query(ctx, "GetRoomCustom", GetRoomCustomDocument, vars, &res); err != nil {
+	_, err := c.Client.Query(ctx, "GetRoomCustom", GetRoomCustomDocument, vars, &res)
+	if err != nil {
 		return nil, err
 	}
 
@@ -88,16 +90,13 @@ type MessageSubscribeMessageAdded struct {
 func (c *Client) SubscribeMessageAdded(ctx context.Context) (chan MessageSubscribeMessageAdded, error) {
 	vars := map[string]interface{}{}
 
-	sub, err := c.Client.Subscription(ctx, "SubscribeMessageAdded", SubscribeMessageAddedDocument, vars)
-	if err != nil {
-		return nil, err
-	}
+	res := c.Client.Subscription(ctx, "SubscribeMessageAdded", SubscribeMessageAddedDocument, vars)
 
 	ch := make(chan MessageSubscribeMessageAdded)
 
 	go func() {
-		for sub.Next() {
-			res := sub.Get()
+		for res.Next() {
+			res := res.Get()
 
 			var datares MessageSubscribeMessageAdded
 			if len(res.Errors) > 0 {
@@ -105,13 +104,14 @@ func (c *Client) SubscribeMessageAdded(ctx context.Context) (chan MessageSubscri
 			}
 
 			err := res.UnmarshalData(&datares.Data)
-			if datares.Error == nil && err != nil {
+			if err != nil && datares.Error == nil {
 				datares.Error = err
 			}
 
 			ch <- datares
 		}
-		if err := sub.Err(); err != nil {
+
+		if err := res.Err(); err != nil {
 			ch <- MessageSubscribeMessageAdded{
 				Error: err,
 			}

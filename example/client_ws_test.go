@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func wscli(ctx context.Context, newWebsocketConn transport.WebsocketConnProvider) (*client.Client, func()) {
+func wscli(ctx context.Context) (*client.Client, func()) {
 	return clifactory(ctx, func(ts *httptest.Server) (transport.Transport, func()) {
 		tr := wstr(ctx, ts.URL)
 
@@ -22,7 +22,7 @@ func wscli(ctx context.Context, newWebsocketConn transport.WebsocketConnProvider
 func TestRawWSQuery(t *testing.T) {
 	ctx := context.Background()
 
-	cli, teardown := wscli(ctx, nil)
+	cli, teardown := wscli(ctx)
 	defer teardown()
 
 	runAssertQuery(t, ctx, cli)
@@ -31,7 +31,7 @@ func TestRawWSQuery(t *testing.T) {
 func TestRawWSSubscription(t *testing.T) {
 	ctx := context.Background()
 
-	cli, teardown := wscli(ctx, nil)
+	cli, teardown := wscli(ctx)
 	defer teardown()
 
 	runAssertSub(t, ctx, cli)
@@ -40,7 +40,7 @@ func TestRawWSSubscription(t *testing.T) {
 func TestWSCtxCancel1(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cli, teardown := wscli(ctx, nil)
+	cli, teardown := wscli(ctx)
 
 	runAssertQuery(t, ctx, cli)
 
@@ -52,7 +52,7 @@ func TestWSCtxCancel1(t *testing.T) {
 func TestWSCtxCancel2(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cli, teardown := wscli(ctx, nil)
+	cli, teardown := wscli(ctx)
 
 	runAssertQuery(t, ctx, cli)
 

@@ -439,7 +439,7 @@ func (t *Ws) Close() error {
 	return t.closeConn()
 }
 
-func (t *Ws) Request(req Request) (Response, error) {
+func (t *Ws) Request(req *Request) Response {
 	t.init()
 
 	t.printLog(GQL_INTERNAL, "REQ")
@@ -447,12 +447,8 @@ func (t *Ws) Request(req Request) (Response, error) {
 	id := fmt.Sprintf("%v", atomic.AddUint64(&t.i, 1))
 
 	res := &wsResponse{
-		Context: req.Context,
-		OperationRequest: OperationRequest{
-			Query:         req.Query,
-			OperationName: req.OperationName,
-			Variables:     req.Variables,
-		},
+		Context:          req.Context,
+		OperationRequest: NewOperationRequestFromRequest(req),
 		ChanResponse: NewChanResponse(
 			func() error {
 				t.printLog(GQL_INTERNAL, "CLOSE RES")
@@ -469,11 +465,11 @@ func (t *Ws) Request(req Request) (Response, error) {
 	if t.status == StatusReady {
 		err := t.startOp(id, res)
 		if err != nil {
-			return res, err
+			return NewErrorResponse(err)
 		}
 	}
 
-	return res, nil
+	return res
 }
 
 func (t *Ws) printLog(typ OperationMessageType, rest ...interface{}) {
@@ -538,7 +534,7 @@ func (t *Ws) cancelOp(id string) error {
 	op, ok := t.ops[id]
 	if !ok {
 		t.opsm.Unlock()
-		return fmt.Errorf("op id %s doesn't not exist", id)
+		return nil
 	}
 	delete(t.ops, id)
 	t.opsm.Unlock()

@@ -15,14 +15,25 @@ const (
 )
 
 type OperationRequest struct {
-	Query         string                 `json:"query"`
+	Query         string                 `json:"query,omitempty"`
 	OperationName string                 `json:"operationName,omitempty"`
 	Variables     map[string]interface{} `json:"variables,omitempty"`
+	Extensions    map[string]interface{} `json:"extensions,omitempty"`
+}
+
+func NewOperationRequestFromRequest(req *Request) OperationRequest {
+	return OperationRequest{
+		Query:         req.Query,
+		OperationName: req.OperationName,
+		Variables:     req.Variables,
+		Extensions:    req.Extensions.Map(),
+	}
 }
 
 type OperationResponse struct {
-	Errors gqlerror.List   `json:"errors,omitempty"`
-	Data   json.RawMessage `json:"data,omitempty"`
+	Data       json.RawMessage            `json:"data,omitempty"`
+	Errors     gqlerror.List              `json:"errors,omitempty"`
+	Extensions map[string]json.RawMessage `json:"extensions,omitempty"`
 }
 
 func (r OperationResponse) UnmarshalData(t interface{}) error {
@@ -33,23 +44,63 @@ func (r OperationResponse) UnmarshalData(t interface{}) error {
 	return json.Unmarshal(r.Data, t)
 }
 
-type Request struct {
-	Context       context.Context
-	Operation     Operation
-	OperationName string
+func (r OperationResponse) UnmarshalExtension(name string, t interface{}) error {
+	if r.Extensions == nil {
+		return nil
+	}
 
-	Query     string
-	Variables map[string]interface{}
+	ex, ok := r.Extensions[name]
+	if !ok {
+		return nil
+	}
+
+	return json.Unmarshal(ex, t)
 }
 
-type Response interface {
-	Next() bool
-	Get() OperationResponse
-	Close()
-	Err() error
-	Done() <-chan struct{}
+type Extensions struct {
+	m map[string]interface{}
+}
+
+func (e *Extensions) Get(k string) interface{} {
+	if e.m == nil {
+		return nil
+	}
+
+	return e.m[k]
+}
+
+func (e *Extensions) Set(k string, v interface{}) {
+	if e.m == nil {
+		e.m = make(map[string]interface{})
+	}
+
+	e.m[k] = v
+}
+
+func (e *Extensions) Map() map[string]interface{} {
+	return e.m
+}
+
+func (e *Extensions) Has(key string) bool {
+	if e.m == nil {
+		return false
+	}
+
+	_, has := e.m[key]
+
+	return has
+}
+
+type Request struct {
+	Context   context.Context
+	Operation Operation
+
+	OperationName string
+	Query         string
+	Variables     map[string]interface{}
+	Extensions    Extensions
 }
 
 type Transport interface {
-	Request(req Request) (Response, error)
+	Request(req *Request) Response
 }

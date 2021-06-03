@@ -6,12 +6,12 @@
 
 ## Why yet another Go GQL client ?
 
-| Package                                     | Codegen | Websocket Subscription |
-|---------------------------------------------|---------|------------------------|
-| https://github.com/shurcooL/graphql         | ❌      | ❌                      |
-| https://github.com/Yamashou/gqlgenc         | ✅      | ❌                      |
-| https://github.com/hasura/go-graphql-client | ❌      | ✅                      |
-| ✨[https://github.com/infiotinc/gqlgenc](https://github.com/infiotinc/gqlgenc)✨| ✅ | ✅ |
+| Package                                     | Codegen | Websocket Subscription | Extensions |
+|---------------------------------------------|---------|------------------------|------------|
+| https://github.com/shurcooL/graphql         | ❌      | ❌                      |❌          |
+| https://github.com/Yamashou/gqlgenc         | ✅      | ❌                      |❌          |
+| https://github.com/hasura/go-graphql-client | ❌      | ✅                      |❌          |
+| ✨[https://github.com/infiotinc/gqlgenc](https://github.com/infiotinc/gqlgenc)✨| ✅ | ✅ | ✅ |
 
 ## GQL Client
 
@@ -61,7 +61,7 @@ func main() {
 var res struct {
     Room string `json:"room"`
 }
-err := cli.Query(ctx, "", "query { room }", nil, &res) // or Mutation
+_, err := cli.Query(ctx, "", "query { room }", nil, &res) // or Mutation
 if err != nil {
     panic(err)
 }
@@ -70,10 +70,7 @@ if err != nil {
 ### Subscription
 
 ```go
-sub, err := cli.Subscription(ctx, "", "subscription { newRoom }", nil)
-if err != nil {
-    panic(err)
-}
+sub := cli.Subscription(ctx, "", "subscription { newRoom }", nil)
 
 for sub.Next() {
     msg := sub.Get()
