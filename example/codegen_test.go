@@ -17,10 +17,8 @@ func TestSubscription(t *testing.T) {
 		Client: cli,
 	}
 
-	ch, err := gql.SubscribeMessageAdded(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ch, stop := gql.SubscribeMessageAdded(ctx)
+	defer stop()
 
 	ids := make([]string, 0)
 
@@ -45,7 +43,7 @@ func TestQuery(t *testing.T) {
 		Client: cli,
 	}
 
-	room, err := gql.GetRoom(ctx, "test")
+	room, _, err := gql.GetRoom(ctx, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +61,7 @@ func TestQueryCustomType(t *testing.T) {
 		Client: cli,
 	}
 
-	room, err := gql.GetRoomCustom(ctx, "test")
+	room, _, err := gql.GetRoomCustom(ctx, "test")
 	if err != nil {
 		t.Fatal(err)
 	}

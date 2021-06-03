@@ -7,6 +7,7 @@ import (
 	"example/somelib"
 
 	"github.com/infiotinc/gqlgenc/client"
+	"github.com/infiotinc/gqlgenc/client/transport"
 )
 
 type Client struct {
@@ -40,18 +41,18 @@ const GetRoomDocument = `query GetRoom ($name: String!) {
 }
 `
 
-func (c *Client) GetRoom(ctx context.Context, name string) (*GetRoom, error) {
+func (c *Client) GetRoom(ctx context.Context, name string) (*GetRoom, transport.OperationResponse, error) {
 	vars := map[string]interface{}{
 		"name": name,
 	}
 
-	var res GetRoom
-	_, err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &res)
+	var data GetRoom
+	res, err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &data)
 	if err != nil {
-		return nil, err
+		return nil, transport.OperationResponse{}, err
 	}
 
-	return &res, nil
+	return &data, res, nil
 }
 
 const GetRoomCustomDocument = `query GetRoomCustom ($name: String!) {
@@ -61,18 +62,18 @@ const GetRoomCustomDocument = `query GetRoomCustom ($name: String!) {
 }
 `
 
-func (c *Client) GetRoomCustom(ctx context.Context, name string) (*somelib.CustomRoom, error) {
+func (c *Client) GetRoomCustom(ctx context.Context, name string) (*somelib.CustomRoom, transport.OperationResponse, error) {
 	vars := map[string]interface{}{
 		"name": name,
 	}
 
-	var res somelib.CustomRoom
-	_, err := c.Client.Query(ctx, "GetRoomCustom", GetRoomCustomDocument, vars, &res)
+	var data somelib.CustomRoom
+	res, err := c.Client.Query(ctx, "GetRoomCustom", GetRoomCustomDocument, vars, &data)
 	if err != nil {
-		return nil, err
+		return nil, transport.OperationResponse{}, err
 	}
 
-	return &res, nil
+	return &data, res, nil
 }
 
 const SubscribeMessageAddedDocument = `subscription SubscribeMessageAdded {
@@ -87,7 +88,7 @@ type MessageSubscribeMessageAdded struct {
 	Error error
 }
 
-func (c *Client) SubscribeMessageAdded(ctx context.Context) (chan MessageSubscribeMessageAdded, error) {
+func (c *Client) SubscribeMessageAdded(ctx context.Context) (<-chan MessageSubscribeMessageAdded, func()) {
 	vars := map[string]interface{}{}
 
 	res := c.Client.Subscription(ctx, "SubscribeMessageAdded", SubscribeMessageAddedDocument, vars)
@@ -96,19 +97,19 @@ func (c *Client) SubscribeMessageAdded(ctx context.Context) (chan MessageSubscri
 
 	go func() {
 		for res.Next() {
-			res := res.Get()
+			opres := res.Get()
 
-			var datares MessageSubscribeMessageAdded
-			if len(res.Errors) > 0 {
-				datares.Error = res.Errors
+			var msg MessageSubscribeMessageAdded
+			if len(opres.Errors) > 0 {
+				msg.Error = opres.Errors
 			}
 
-			err := res.UnmarshalData(&datares.Data)
-			if err != nil && datares.Error == nil {
-				datares.Error = err
+			err := opres.UnmarshalData(&msg.Data)
+			if err != nil && msg.Error == nil {
+				msg.Error = err
 			}
 
-			ch <- datares
+			ch <- msg
 		}
 
 		if err := res.Err(); err != nil {
@@ -119,5 +120,5 @@ func (c *Client) SubscribeMessageAdded(ctx context.Context) (chan MessageSubscri
 		close(ch)
 	}()
 
-	return ch, nil
+	return ch, res.Close
 }

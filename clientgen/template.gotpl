@@ -11,6 +11,7 @@
 	{{ reserveImport "time" }}
 
 	{{ reserveImport "github.com/infiotinc/gqlgenc/client" }}
+	{{ reserveImport "github.com/infiotinc/gqlgenc/client/transport" }}
 
 	type Client struct {
 	    Client *client.Client
@@ -45,7 +46,7 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                 Error error
             }
 
-            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (chan Message{{ $model.Name|go }}, error) {
+            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $model.Name|go }}, func()) {
                 vars := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
@@ -58,19 +59,19 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
 
                 go func() {
                     for res.Next() {
-                        res := res.Get()
+                        opres := res.Get()
 
-                        var datares Message{{ $model.Name|go }}
-                        if len(res.Errors) > 0 {
-                            datares.Error = res.Errors
+                        var msg Message{{ $model.Name|go }}
+                        if len(opres.Errors) > 0 {
+                            msg.Error = opres.Errors
                         }
 
-                        err := res.UnmarshalData(&datares.Data)
-                        if err != nil && datares.Error == nil {
-                            datares.Error = err
+                        err := opres.UnmarshalData(&msg.Data)
+                        if err != nil && msg.Error == nil {
+                            msg.Error = err
                         }
 
-                        ch <- datares
+                        ch <- msg
                     }
 
                     if err := res.Err(); err != nil {
@@ -81,23 +82,23 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                     close(ch)
                 }()
 
-                return ch, nil
+                return ch, res.Close
             }
         {{- else}}
-            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $model.ResponseType | ref }}, error) {
+            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $model.ResponseType | ref }}, transport.OperationResponse, error) {
                 vars := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
                 }
 
-                var res {{ $model.ResponseType | ref }}
-                _, err := c.Client.{{ $model.OperationType|ucFirst }}(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars, &res)
+                var data {{ $model.ResponseType | ref }}
+                res, err := c.Client.{{ $model.OperationType|ucFirst }}(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars, &data)
                 if err != nil {
-                    return nil, err
+                    return nil, transport.OperationResponse{}, err
                 }
 
-                return &res, nil
+                return &data, res, nil
             }
         {{- end}}
 	{{- end}}

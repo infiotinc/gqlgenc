@@ -439,7 +439,7 @@ func (t *Ws) Close() error {
 	return t.closeConn()
 }
 
-func (t *Ws) Request(req *Request) Response {
+func (t *Ws) Request(req Request) Response {
 	t.init()
 
 	t.printLog(GQL_INTERNAL, "REQ")

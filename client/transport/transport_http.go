@@ -16,7 +16,7 @@ type Http struct {
 	RequestOptions []HttpRequestOption
 }
 
-func (h *Http) request(gqlreq *Request) (*OperationResponse, error) {
+func (h *Http) request(gqlreq Request) (*OperationResponse, error) {
 	if h.Client == nil {
 		h.Client = http.DefaultClient
 	}
@@ -57,7 +57,7 @@ func (h *Http) request(gqlreq *Request) (*OperationResponse, error) {
 	return &opres, nil
 }
 
-func (h *Http) Request(req *Request) Response {
+func (h *Http) Request(req Request) Response {
 	opres, err := h.request(req)
 	if err != nil {
 		return NewErrorResponse(err)

@@ -21,7 +21,7 @@ type OperationRequest struct {
 	Extensions    map[string]interface{} `json:"extensions,omitempty"`
 }
 
-func NewOperationRequestFromRequest(req *Request) OperationRequest {
+func NewOperationRequestFromRequest(req Request) OperationRequest {
 	return OperationRequest{
 		Query:         req.Query,
 		OperationName: req.OperationName,
@@ -102,5 +102,5 @@ type Request struct {
 }
 
 type Transport interface {
-	Request(req *Request) Response
+	Request(req Request) Response
 }

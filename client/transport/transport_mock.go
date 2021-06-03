@@ -8,7 +8,7 @@ import (
 
 type Mock map[string]Func
 
-func (m Mock) Request(req *Request) (Response) {
+func (m Mock) Request(req Request) Response {
 	h, ok := m[req.Query]
 	if !ok {
 		panic(fmt.Sprintf("query not handled: \n%v", req.Query))

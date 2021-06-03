@@ -70,7 +70,8 @@ if err != nil {
 ### Subscription
 
 ```go
-sub := cli.Subscription(ctx, "", "subscription { newRoom }", nil)
+sub, stop := cli.Subscription(ctx, "", "subscription { newRoom }", nil)
+defer stop()
 
 for sub.Next() {
     msg := sub.Get()
@@ -140,6 +141,16 @@ gql := &graph.Client{
 }
 
 gql.GetRoom(...)
+```
+
+## Extensions
+
+### APQ
+
+[Automatic Persisted Queries](https://www.apollographql.com/docs/apollo-server/performance/apq/) can be enabled by adding:
+
+```go
+cli.Use(&extensions.APQ{})
 ```
 
 ## Release

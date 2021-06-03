@@ -1,13 +1,13 @@
 package transport
 
-type Func func(*Request) Response
+type Func func(Request) Response
 
-func (f Func) Request(o *Request) Response {
-	return f(o)
+func (f Func) Request(req Request) Response {
+	return f(req)
 }
 
-func Split(f func(*Request) (Transport, error)) Transport {
-	return Func(func(req *Request) Response {
+func Split(f func(Request) (Transport, error)) Transport {
+	return Func(func(req Request) Response {
 		tr, err := f(req)
 		if err != nil {
 			return NewErrorResponse(err)
@@ -19,7 +19,7 @@ func Split(f func(*Request) (Transport, error)) Transport {
 
 // SplitSubscription routes subscription to subtr, and other type of queries to othertr
 func SplitSubscription(subtr, othertr Transport) Transport {
-	return Split(func(req *Request) (Transport, error) {
+	return Split(func(req Request) (Transport, error) {
 		if req.Operation == Subscription {
 			return subtr, nil
 		}

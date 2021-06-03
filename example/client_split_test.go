@@ -12,7 +12,7 @@ import (
 type splitStats map[string]int
 
 func (ss splitStats) wrapTr(name string, tr transport.Transport) transport.Transport {
-	return transport.Func(func(req *transport.Request) transport.Response {
+	return transport.Func(func(req transport.Request) transport.Response {
 		if _, ok := ss[name]; !ok {
 			ss[name] = 0
 		}

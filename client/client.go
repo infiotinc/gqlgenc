@@ -16,13 +16,13 @@ func (es *extensions) Use(e Extension) {
 	}
 }
 
-func (es *extensions) RunAroundRequest(req *transport.Request, h RequestHandler) transport.Response {
+func (es *extensions) RunAroundRequest(req transport.Request, h RequestHandler) transport.Response {
 	run := h
 
 	for _, _e := range es.aroundRequest {
 		e := _e // Local ref
 		next := run // Local ref
-		run = func(req *transport.Request) transport.Response {
+		run = func(req transport.Request) transport.Response {
 			return e.AroundRequest(req, next)
 		}
 	}
@@ -44,7 +44,7 @@ func (c *Client) doSingle(
 	variables map[string]interface{},
 	t interface{},
 ) (transport.OperationResponse, error) {
-	res := c.Do(&transport.Request{
+	res := c.do(transport.Request{
 		Context:       ctx,
 		Operation:     operation,
 		Query:         query,
@@ -72,7 +72,7 @@ func (c *Client) doSingle(
 	return opres, err
 }
 
-func (c *Client) Do(req *transport.Request) transport.Response {
+func (c *Client) do(req transport.Request) transport.Response {
 	return c.RunAroundRequest(req, c.Transport.Request)
 }
 
@@ -91,7 +91,7 @@ func (c *Client) Mutation(ctx context.Context, operationName string, query strin
 // Subscription starts a GQL subscription
 // operationName is optional
 func (c *Client) Subscription(ctx context.Context, operationName string, query string, variables map[string]interface{}) transport.Response {
-	return c.Do(&transport.Request{
+	return c.do(transport.Request{
 		Context:       ctx,
 		Operation:     transport.Subscription,
 		Query:         query,
