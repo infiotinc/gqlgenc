@@ -19,7 +19,7 @@ func TestHttpAPQQuery(t *testing.T) {
 
 	runAssertQuery(t, ctx, cli, func(opres transport.OperationResponse, data RoomQueryResponse) {
 		var stats extension.ApqStats
-		err := opres.UnmarshalExtension("apqStats", &stats)
+		err := opres.Extensions.Unmarshal("apqStats", &stats)
 		if err != nil {
 			assert.Fail(t, err.Error())
 		}
@@ -29,7 +29,7 @@ func TestHttpAPQQuery(t *testing.T) {
 
 	runAssertQuery(t, ctx, cli, func(opres transport.OperationResponse, data RoomQueryResponse) {
 		var stats extension.ApqStats
-		err := opres.UnmarshalExtension("apqStats", &stats)
+		err := opres.Extensions.Unmarshal("apqStats", &stats)
 		if err != nil {
 			assert.Fail(t, err.Error())
 		}
@@ -57,7 +57,7 @@ func TestSplitAPQSubscription(t *testing.T) {
 
 	runAssertSub(t, ctx, cli, func(opres transport.OperationResponse, data MessagesSubResponse) {
 		var stats extension.ApqStats
-		err := opres.UnmarshalExtension("apqStats", &stats)
+		err := opres.Extensions.Unmarshal("apqStats", &stats)
 		if err != nil {
 			assert.Fail(t, err.Error())
 		}
@@ -67,7 +67,7 @@ func TestSplitAPQSubscription(t *testing.T) {
 
 	runAssertSub(t, ctx, cli, func(opres transport.OperationResponse, data MessagesSubResponse) {
 		var stats extension.ApqStats
-		err := opres.UnmarshalExtension("apqStats", &stats)
+		err := opres.Extensions.Unmarshal("apqStats", &stats)
 		if err != nil {
 			assert.Fail(t, err.Error())
 		}

@@ -42,8 +42,9 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
 	{{- if $.GenerateClient }}
         {{- if eq $model.OperationType "subscription" }}
             type Message{{ $model.Name|go }} struct {
-                Data  *{{ $model.ResponseType | ref }}
-                Error error
+                Data       *{{ $model.ResponseType | ref }}
+                Error      error
+                Extensions transport.RawExtensions
             }
 
             func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $model.Name|go }}, func()) {
@@ -70,6 +71,8 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                         if err != nil && msg.Error == nil {
                             msg.Error = err
                         }
+
+                        msg.Extensions = opres.Extensions
 
                         ch <- msg
                     }

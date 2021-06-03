@@ -84,8 +84,9 @@ const SubscribeMessageAddedDocument = `subscription SubscribeMessageAdded {
 `
 
 type MessageSubscribeMessageAdded struct {
-	Data  *SubscribeMessageAdded
-	Error error
+	Data       *SubscribeMessageAdded
+	Error      error
+	Extensions transport.RawExtensions
 }
 
 func (c *Client) SubscribeMessageAdded(ctx context.Context) (<-chan MessageSubscribeMessageAdded, func()) {
@@ -108,6 +109,8 @@ func (c *Client) SubscribeMessageAdded(ctx context.Context) (<-chan MessageSubsc
 			if err != nil && msg.Error == nil {
 				msg.Error = err
 			}
+
+			msg.Extensions = opres.Extensions
 
 			ch <- msg
 		}

@@ -31,9 +31,24 @@ func NewOperationRequestFromRequest(req Request) OperationRequest {
 }
 
 type OperationResponse struct {
-	Data       json.RawMessage            `json:"data,omitempty"`
-	Errors     gqlerror.List              `json:"errors,omitempty"`
-	Extensions map[string]json.RawMessage `json:"extensions,omitempty"`
+	Data       json.RawMessage `json:"data,omitempty"`
+	Errors     gqlerror.List   `json:"errors,omitempty"`
+	Extensions RawExtensions   `json:"extensions,omitempty"`
+}
+
+type RawExtensions map[string]json.RawMessage
+
+func (es RawExtensions) Unmarshal(name string, t interface{}) error {
+	if es == nil {
+		return nil
+	}
+
+	ex, ok := es[name]
+	if !ok {
+		return nil
+	}
+
+	return json.Unmarshal(ex, t)
 }
 
 func (r OperationResponse) UnmarshalData(t interface{}) error {
@@ -42,19 +57,6 @@ func (r OperationResponse) UnmarshalData(t interface{}) error {
 	}
 
 	return json.Unmarshal(r.Data, t)
-}
-
-func (r OperationResponse) UnmarshalExtension(name string, t interface{}) error {
-	if r.Extensions == nil {
-		return nil
-	}
-
-	ex, ok := r.Extensions[name]
-	if !ok {
-		return nil
-	}
-
-	return json.Unmarshal(ex, t)
 }
 
 type Extensions struct {
