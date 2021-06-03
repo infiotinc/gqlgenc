@@ -73,7 +73,17 @@ func (c *Client) doSingle(
 }
 
 func (c *Client) do(req transport.Request) transport.Response {
-	return c.RunAroundRequest(req, c.Transport.Request)
+	res := c.RunAroundRequest(req, c.Transport.Request)
+
+	go func() {
+		select {
+		case <-req.Context.Done():
+			res.Close()
+		case <-res.Done():
+		}
+	}()
+
+	return res
 }
 
 // Query runs a query
