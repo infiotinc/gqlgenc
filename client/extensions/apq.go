@@ -45,11 +45,10 @@ func (a *APQ) AroundRequest(req transport.Request, next client.RequestHandler) t
 		for _, err := range opres.Errors {
 			if code, ok := err.Extensions["code"]; ok {
 				if code == "PERSISTED_QUERY_NOT_FOUND" {
-					nres.Bind(next(req), nil)
-
 					nres.Unbind(res)
-					res.Close()
+					go res.Close()
 
+					nres.Bind(next(req), nil)
 					return
 				}
 			}
