@@ -15,13 +15,13 @@ type Client struct {
 }
 
 type Query struct {
-	Room *Chatroom "json:\"room\" graphql:\"room\""
+	Room *Chatroom "json:\"room\""
 }
 type Mutation struct {
-	Post Message "json:\"post\" graphql:\"post\""
+	Post Message "json:\"post\""
 }
 type Subscription struct {
-	MessageAdded Message "json:\"messageAdded\" graphql:\"messageAdded\""
+	MessageAdded Message "json:\"messageAdded\""
 }
 type GetRoom struct {
 	Room *struct {

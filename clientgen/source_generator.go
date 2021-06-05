@@ -125,7 +125,6 @@ func (r *SourceGenerator) NewResponseFieldsByDefinition(definition *ast.Definiti
 
 		tags := []string{
 			fmt.Sprintf(`json:"%s"`, field.Name),
-			fmt.Sprintf(`graphql:"%s"`, field.Name),
 		}
 
 		fields = append(fields, &ResponseField{

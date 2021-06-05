@@ -26,7 +26,7 @@ func NewOperationRequestFromRequest(req Request) OperationRequest {
 		Query:         req.Query,
 		OperationName: req.OperationName,
 		Variables:     req.Variables,
-		Extensions:    req.Extensions.Map(),
+		Extensions:    req.Extensions,
 	}
 }
 
@@ -34,6 +34,14 @@ type OperationResponse struct {
 	Data       json.RawMessage `json:"data,omitempty"`
 	Errors     gqlerror.List   `json:"errors,omitempty"`
 	Extensions RawExtensions   `json:"extensions,omitempty"`
+}
+
+func (r OperationResponse) UnmarshalData(t interface{}) error {
+	if r.Data == nil {
+		return nil
+	}
+
+	return json.Unmarshal(r.Data, t)
 }
 
 type RawExtensions map[string]json.RawMessage
@@ -51,48 +59,6 @@ func (es RawExtensions) Unmarshal(name string, t interface{}) error {
 	return json.Unmarshal(ex, t)
 }
 
-func (r OperationResponse) UnmarshalData(t interface{}) error {
-	if r.Data == nil {
-		return nil
-	}
-
-	return json.Unmarshal(r.Data, t)
-}
-
-type Extensions struct {
-	m map[string]interface{}
-}
-
-func (e *Extensions) Get(k string) interface{} {
-	if e.m == nil {
-		return nil
-	}
-
-	return e.m[k]
-}
-
-func (e *Extensions) Set(k string, v interface{}) {
-	if e.m == nil {
-		e.m = make(map[string]interface{})
-	}
-
-	e.m[k] = v
-}
-
-func (e *Extensions) Map() map[string]interface{} {
-	return e.m
-}
-
-func (e *Extensions) Has(key string) bool {
-	if e.m == nil {
-		return false
-	}
-
-	_, has := e.m[key]
-
-	return has
-}
-
 type Request struct {
 	Context   context.Context
 	Operation Operation
@@ -100,7 +66,7 @@ type Request struct {
 	OperationName string
 	Query         string
 	Variables     map[string]interface{}
-	Extensions    Extensions
+	Extensions    map[string]interface{}
 }
 
 type Transport interface {

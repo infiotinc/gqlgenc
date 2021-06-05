@@ -23,12 +23,12 @@ func (a *APQ) ExtensionName() string {
 }
 
 func (a *APQ) AroundRequest(req transport.Request, next client.RequestHandler) transport.Response {
-	if !req.Extensions.Has(APQKey) {
+	if _, ok := req.Extensions[APQKey]; !ok {
 		sum := sha256.Sum256([]byte(req.Query))
-		req.Extensions.Set(APQKey, APQExtension{
+		req.Extensions[APQKey] = APQExtension{
 			Version:    1,
 			Sha256Hash: fmt.Sprintf("%x", sum),
-		})
+		}
 	}
 
 	res := next(transport.Request{

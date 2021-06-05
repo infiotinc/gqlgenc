@@ -73,6 +73,10 @@ func (c *Client) doSingle(
 }
 
 func (c *Client) do(req transport.Request) transport.Response {
+	if req.Extensions == nil {
+		req.Extensions = map[string]interface{}{}
+	}
+
 	res := c.RunAroundRequest(req, c.Transport.Request)
 
 	go func() {
