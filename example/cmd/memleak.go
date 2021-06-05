@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"example"
-	"example/graph"
-	"example/graph/generated"
+	"example/server"
+	"example/server/generated"
 	_ "expvar" // Register the expvar handlers
 	"fmt"
 	"github.com/99designs/gqlgen/graphql"
@@ -48,7 +48,7 @@ func round(cli *client.Client) {
 
 func main() {
 	srv := handler.New(generated.NewExecutableSchema(generated.Config{
-		Resolvers: &graph.Resolver{},
+		Resolvers: &server.Resolver{},
 	}))
 
 	srv.AddTransport(htransport.POST{})

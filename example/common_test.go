@@ -2,8 +2,8 @@ package example
 
 import (
 	"context"
-	"example/graph"
-	"example/graph/generated"
+	"example/server"
+	"example/server/generated"
 	"fmt"
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -64,7 +64,7 @@ func httptr(ctx context.Context, u string) *transport.Http {
 
 func clifactory(ctx context.Context, trf func(server *httptest.Server) (transport.Transport, func())) (*client.Client, func()) {
 	h := handler.New(generated.NewExecutableSchema(generated.Config{
-		Resolvers: &graph.Resolver{},
+		Resolvers: &server.Resolver{},
 	}))
 
 	h.AddTransport(htransport.POST{})

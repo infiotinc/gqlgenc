@@ -1,4 +1,4 @@
-package graph
+package server
 
 // See https://github.com/golang/go/issues/44129#issuecomment-815008489
 import (

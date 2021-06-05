@@ -2,7 +2,7 @@ package example
 
 import (
 	"context"
-	"example/graph"
+	"example/client"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -13,7 +13,7 @@ func TestSubscription(t *testing.T) {
 	cli, td, _ := splitcli(ctx)
 	defer td()
 
-	gql := &graph.Client{
+	gql := &client.Client{
 		Client: cli,
 	}
 
@@ -39,7 +39,7 @@ func TestQuery(t *testing.T) {
 	cli, td, _ := splitcli(ctx)
 	defer td()
 
-	gql := &graph.Client{
+	gql := &client.Client{
 		Client: cli,
 	}
 
@@ -57,7 +57,7 @@ func TestQueryCustomType(t *testing.T) {
 	cli, td, _ := splitcli(ctx)
 	defer td()
 
-	gql := &graph.Client{
+	gql := &client.Client{
 		Client: cli,
 	}
 

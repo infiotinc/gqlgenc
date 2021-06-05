@@ -3,12 +3,11 @@ package clientgen
 import (
 	"bytes"
 	"fmt"
-	"go/types"
-
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/infiotinc/gqlgenc/config"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/formatter"
+	"go/types"
 )
 
 type Source struct {
@@ -70,31 +69,26 @@ type Operation struct {
 	VariableDefinitions ast.VariableDefinitionList
 }
 
-func NewOperation(operation *ast.OperationDefinition, queryDocument *ast.QueryDocument, args []*Argument, srcgen *SourceGenerator) *Operation {
+func NewOperation(operation *OperationResponse, queryDocument *ast.QueryDocument, args []*Argument) *Operation {
 	return &Operation{
 		Name:                operation.Name,
-		OperationType:       string(operation.Operation),
-		ResponseType:        srcgen.Type(operation.Name),
+		OperationType:       string(operation.Operation.Operation),
+		ResponseType:        operation.Type,
 		Operation:           queryString(queryDocument),
 		Args:                args,
-		VariableDefinitions: operation.VariableDefinitions,
+		VariableDefinitions: operation.Operation.VariableDefinitions,
 	}
 }
 
-func (s *Source) Operations(queryDocuments []*ast.QueryDocument) []*Operation {
+func (s *Source) Operations(queryDocuments []*ast.QueryDocument, operationResponses []*OperationResponse) []*Operation {
 	operations := make([]*Operation, 0, len(s.queryDocument.Operations))
 
 	queryDocumentsMap := queryDocumentMapByOperationName(queryDocuments)
 	operationArgsMap := s.operationArgsMapByOperationName()
-	for _, operation := range s.queryDocument.Operations {
+	for _, operation := range operationResponses {
 		queryDocument := queryDocumentsMap[operation.Name]
 		args := operationArgsMap[operation.Name]
-		operations = append(operations, NewOperation(
-			operation,
-			queryDocument,
-			args,
-			s.sourceGenerator,
-		))
+		operations = append(operations, NewOperation(operation, queryDocument, args))
 	}
 
 	return operations
@@ -128,31 +122,40 @@ func queryString(queryDocument *ast.QueryDocument) string {
 }
 
 type OperationResponse struct {
-	Name string
-	Type types.Type
+	Operation *ast.OperationDefinition
+	Name      string
+	Type      types.Type
+	Gen       bool
 }
 
 func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 	operationResponses := make([]*OperationResponse, 0, len(s.queryDocument.Operations))
-	for _, operation := range s.queryDocument.Operations {
-		responseFields := s.sourceGenerator.NewResponseFields(operation.SelectionSet)
-		name := getResponseStructName(operation, s.generateConfig)
+	for _, operationResponse := range s.queryDocument.Operations {
+		responseFields := s.sourceGenerator.NewResponseFields(operationResponse.SelectionSet)
+		name := getResponseStructName(operationResponse, s.generateConfig)
+
+		var typ types.Type
+		var gen bool
 		if s.sourceGenerator.cfg.Models.Exists(name) {
 			fmt.Printf("%s is already declared: %v\n", name, s.sourceGenerator.cfg.Models[name].Model)
-			continue
-		}
-		operationResponses = append(operationResponses, &OperationResponse{
-			Name: name,
-			Type: responseFields.StructType(),
-		})
-	}
+			gen = false
+			typ = s.sourceGenerator.Type(name)
+		} else {
+			s.sourceGenerator.cfg.Models.Add(
+				name,
+				fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), templates.ToGo(name)),
+			)
 
-	for _, operationResponse := range operationResponses {
-		name := operationResponse.Name
-		s.sourceGenerator.cfg.Models.Add(
-			name,
-			fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), templates.ToGo(name)),
-		)
+			gen = true
+			typ = responseFields.StructType()
+		}
+
+		operationResponses = append(operationResponses, &OperationResponse{
+			Operation: operationResponse,
+			Name:      name,
+			Type:      typ,
+			Gen:       gen,
+		})
 	}
 
 	return operationResponses, nil

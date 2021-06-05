@@ -1,4 +1,4 @@
-package graph
+package server
 
 // This file will be automatically regenerated based on the schema, any resolver implementations
 // will be copied through when generating and any unknown code will be moved to the end.
@@ -6,8 +6,8 @@ package graph
 import (
 	"context"
 	"errors"
-	"example/graph/generated"
-	"example/graph/model"
+	"example/server/generated"
+	"example/server/model"
 	"fmt"
 	"os"
 	"strconv"
