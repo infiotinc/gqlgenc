@@ -28,5 +28,4 @@ jobs:
       run: make test
 
     - name: Test Example
-      working-directory: example
       run: make example-test
