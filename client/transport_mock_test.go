@@ -14,14 +14,14 @@ func TestSingleResponse(t *testing.T) {
 
 	cli := &Client{
 		Transport: transport.Mock{
-			"query": func(req transport.Request) (transport.Response, error) {
-				return transport.NewSingleResponse(transport.NewMockOperationResponse("hey", nil)), nil
+			"query": func(req transport.Request) transport.Response {
+				return transport.NewSingleResponse(transport.NewMockOperationResponse("hey", nil))
 			},
 		},
 	}
 
 	var res string
-	err := cli.Query(context.Background(), "", "query", nil, &res)
+	_, err := cli.Query(context.Background(), "", "query", nil, &res)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestChanResponse(t *testing.T) {
 
 	cli := &Client{
 		Transport: transport.Mock{
-			"query": func(req transport.Request) (transport.Response, error) {
+			"query": func(req transport.Request) transport.Response {
 				res := transport.NewChanResponse(nil)
 
 				go func() {
@@ -44,15 +44,12 @@ func TestChanResponse(t *testing.T) {
 					res.CloseCh()
 				}()
 
-				return res, nil
+				return res
 			},
 		},
 	}
 
-	sub, err := cli.Subscription(context.Background(), "", "query", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	sub := cli.Subscription(context.Background(), "", "query", nil)
 	defer sub.Close()
 
 	msgs := make([]string, 0)

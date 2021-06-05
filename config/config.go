@@ -263,7 +263,7 @@ func (c *Config) loadRemoteSchema(ctx context.Context) (*ast.Schema, error) {
 	}
 
 	var res introspection.Query
-	if err := gqlClient.Query(ctx, "", introspection.Introspection, nil, &res); err != nil {
+	if _, err := gqlClient.Query(ctx, "", introspection.Introspection, nil, &res); err != nil {
 		return nil, fmt.Errorf("introspection query failed: %w", err)
 	}
 

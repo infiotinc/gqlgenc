@@ -16,23 +16,17 @@ type Http struct {
 	RequestOptions []HttpRequestOption
 }
 
-func (h *Http) Request(o Request) (Response, error) {
+func (h *Http) request(gqlreq Request) (*OperationResponse, error) {
 	if h.Client == nil {
 		h.Client = http.DefaultClient
 	}
 
-	body := OperationRequest{
-		Query:         o.Query,
-		OperationName: o.OperationName,
-		Variables:     o.Variables,
-	}
-
-	bodyb, err := json.Marshal(body)
+	bodyb, err := json.Marshal(NewOperationRequestFromRequest(gqlreq))
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(o.Context, "POST", h.URL, bytes.NewReader(bodyb))
+	req, err := http.NewRequestWithContext(gqlreq.Context, "POST", h.URL, bytes.NewReader(bodyb))
 	if err != nil {
 		return nil, err
 	}
@@ -60,5 +54,14 @@ func (h *Http) Request(o Request) (Response, error) {
 		return nil, err
 	}
 
-	return NewSingleResponse(opres), nil
+	return &opres, nil
+}
+
+func (h *Http) Request(req Request) Response {
+	opres, err := h.request(req)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSingleResponse(*opres)
 }

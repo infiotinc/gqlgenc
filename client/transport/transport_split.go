@@ -1,16 +1,16 @@
 package transport
 
-type Func func(Request) (Response, error)
+type Func func(Request) Response
 
-func (f Func) Request(o Request) (Response, error) {
-	return f(o)
+func (f Func) Request(req Request) Response {
+	return f(req)
 }
 
 func Split(f func(Request) (Transport, error)) Transport {
-	return Func(func(req Request) (Response, error) {
+	return Func(func(req Request) Response {
 		tr, err := f(req)
 		if err != nil {
-			return nil, err
+			return NewErrorResponse(err)
 		}
 
 		return tr.Request(req)

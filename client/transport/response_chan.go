@@ -3,7 +3,8 @@ package transport
 import "sync"
 
 type ChanResponse struct {
-	err    error
+	responseError
+
 	ch     chan OperationResponse
 	close  func() error
 	closed bool
@@ -39,6 +40,16 @@ func (r *ChanResponse) Close() {
 	if r.close != nil {
 		r.err = r.close()
 	}
+	r.CloseCh()
+}
+
+func (r *ChanResponse) CloseWithError(err error) {
+	r.responseError.CloseWithError(err)
+	r.CloseCh()
+
+	if r.close != nil {
+		_ = r.close()
+	}
 }
 
 func (r *ChanResponse) CloseCh() {
@@ -53,18 +64,15 @@ func (r *ChanResponse) CloseCh() {
 	r.m.Unlock()
 }
 
-func (r *ChanResponse) Err() error {
-	return r.err
-}
-
 func (r *ChanResponse) Done() <-chan struct{} {
 	return r.dc
 }
 
 func (r *ChanResponse) Send(op OperationResponse) {
 	r.m.Lock()
-	if !r.closed {
-		r.ch <- op
+	select {
+	case r.ch <- op:
+	case <-r.Done():
 	}
 	r.m.Unlock()
 }

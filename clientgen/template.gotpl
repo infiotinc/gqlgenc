@@ -11,6 +11,7 @@
 	{{ reserveImport "time" }}
 
 	{{ reserveImport "github.com/infiotinc/gqlgenc/client" }}
+	{{ reserveImport "github.com/infiotinc/gqlgenc/client/transport" }}
 
 	type Client struct {
 	    Client *client.Client
@@ -41,41 +42,42 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
 	{{- if $.GenerateClient }}
         {{- if eq $model.OperationType "subscription" }}
             type Message{{ $model.Name|go }} struct {
-                Data  *{{ $model.ResponseType | ref }}
-                Error error
+                Data       *{{ $model.ResponseType | ref }}
+                Error      error
+                Extensions transport.RawExtensions
             }
 
-            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (chan Message{{ $model.Name|go }}, error) {
+            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $model.Name|go }}, func()) {
                 vars := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
                 }
 
-                sub, err := c.Client.Subscription(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars)
-                if err != nil {
-            		return nil, err
-                }
+                res := c.Client.Subscription(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars)
 
                 ch := make(chan Message{{ $model.Name|go }})
 
                 go func() {
-                    for sub.Next() {
-                        res := sub.Get()
+                    for res.Next() {
+                        opres := res.Get()
 
-                        var datares Message{{ $model.Name|go }}
-                        if len(res.Errors) > 0 {
-                            datares.Error = res.Errors
+                        var msg Message{{ $model.Name|go }}
+                        if len(opres.Errors) > 0 {
+                            msg.Error = opres.Errors
                         }
 
-                        err := res.UnmarshalData(&datares.Data)
-                        if datares.Error == nil && err != nil {
-                            datares.Error = err
+                        err := opres.UnmarshalData(&msg.Data)
+                        if err != nil && msg.Error == nil {
+                            msg.Error = err
                         }
 
-                        ch <- datares
+                        msg.Extensions = opres.Extensions
+
+                        ch <- msg
                     }
-                    if err := sub.Err(); err != nil {
+
+                    if err := res.Err(); err != nil {
                         ch <- Message{{ $model.Name|go }} {
                             Error: err,
                         }
@@ -83,22 +85,23 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
                     close(ch)
                 }()
 
-                return ch, nil
+                return ch, res.Close
             }
         {{- else}}
-            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $model.ResponseType | ref }}, error) {
+            func (c *Client) {{ $model.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $model.ResponseType | ref }}, transport.OperationResponse, error) {
                 vars := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
                 }
 
-                var res {{ $model.ResponseType | ref }}
-                if err := c.Client.{{ $model.OperationType|ucFirst }}(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars, &res); err != nil {
-                    return nil, err
+                var data {{ $model.ResponseType | ref }}
+                res, err := c.Client.{{ $model.OperationType|ucFirst }}(ctx, "{{ $model.Name|go }}", {{ $model.Name|go }}Document, vars, &data)
+                if err != nil {
+                    return nil, transport.OperationResponse{}, err
                 }
 
-                return &res, nil
+                return &data, res, nil
             }
         {{- end}}
 	{{- end}}
