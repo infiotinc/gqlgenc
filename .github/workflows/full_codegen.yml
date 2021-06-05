@@ -23,3 +23,9 @@ jobs:
 
     - name: Test Example
       run: make example-test
+
+    - name: Re-Codegen
+      run: make example-genall
+
+    - name: Test Example
+      run: make example-test

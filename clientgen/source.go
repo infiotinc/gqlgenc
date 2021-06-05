@@ -73,7 +73,7 @@ func NewOperation(operation *OperationResponse, queryDocument *ast.QueryDocument
 	return &Operation{
 		Name:                operation.Name,
 		OperationType:       string(operation.Operation.Operation),
-		ResponseType:        operation.Type,
+		ResponseType:        operation.RefType,
 		Operation:           queryString(queryDocument),
 		Args:                args,
 		VariableDefinitions: operation.Operation.VariableDefinitions,
@@ -124,8 +124,8 @@ func queryString(queryDocument *ast.QueryDocument) string {
 type OperationResponse struct {
 	Operation *ast.OperationDefinition
 	Name      string
-	Type      types.Type
-	Gen       bool
+	GenType   types.Type
+	RefType   types.Type
 }
 
 func (s *Source) OperationResponses() ([]*OperationResponse, error) {
@@ -134,28 +134,37 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 		responseFields := s.sourceGenerator.NewResponseFields(operationResponse.SelectionSet)
 		name := getResponseStructName(operationResponse, s.generateConfig)
 
-		var typ types.Type
-		var gen bool
-		if s.sourceGenerator.cfg.Models.Exists(name) {
-			fmt.Printf("%s is already declared: %v\n", name, s.sourceGenerator.cfg.Models[name].Model)
-			gen = false
-			typ = s.sourceGenerator.Type(name)
-		} else {
-			s.sourceGenerator.cfg.Models.Add(
-				name,
-				fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), templates.ToGo(name)),
-			)
-
-			gen = true
-			typ = responseFields.StructType()
-		}
-
-		operationResponses = append(operationResponses, &OperationResponse{
+		opres := &OperationResponse{
 			Operation: operationResponse,
 			Name:      name,
-			Type:      typ,
-			Gen:       gen,
-		})
+		}
+
+		if s.sourceGenerator.cfg.Models.Exists(name) {
+			model := s.sourceGenerator.cfg.Models[name].Model[0]
+			fmt.Printf("%s is already declared: %v\n", name, model)
+
+			typ, err := s.sourceGenerator.binder.FindTypeFromName(model)
+			if err != nil {
+				return nil, fmt.Errorf("cannot get type for %v: %w", name, err)
+			}
+
+			opres.RefType = typ
+		} else {
+			sname := templates.ToGo(name)
+			s.sourceGenerator.cfg.Models.Add(
+				name,
+				fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), sname),
+			)
+
+			opres.GenType = responseFields.StructType()
+			opres.RefType = types.NewNamed(
+				types.NewTypeName(0, s.sourceGenerator.client.Pkg(), sname, nil),
+				types.NewInterfaceType([]*types.Func{}, []types.Type{}),
+				nil,
+			)
+		}
+
+		operationResponses = append(operationResponses, opres)
 	}
 
 	return operationResponses, nil

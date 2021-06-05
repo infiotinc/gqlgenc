@@ -33,8 +33,8 @@ type {{ .Query.Name | go }} {{ .Query.Type | ref }}
 {{- end }}
 
 {{- range $name, $element := .OperationResponse }}
-    {{- if $element.Gen }}
-	    type {{ .Name | go  }} {{ .Type | ref }}
+    {{- if $element.GenType }}
+	    type {{ .Name | go  }} {{ .GenType | ref }}
     {{- end}}
 {{- end }}
 

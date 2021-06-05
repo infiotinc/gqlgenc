@@ -42,20 +42,12 @@ const GetRoomDocument = `query GetRoom ($name: String!) {
 }
 `
 
-func (c *Client) GetRoom(ctx context.Context, name string) (*struct {
-	Room *struct {
-		Name string "json:\"name\""
-	} "json:\"room\""
-}, transport.OperationResponse, error) {
+func (c *Client) GetRoom(ctx context.Context, name string) (*GetRoom, transport.OperationResponse, error) {
 	vars := map[string]interface{}{
 		"name": name,
 	}
 
-	var data struct {
-		Room *struct {
-			Name string "json:\"name\""
-		} "json:\"room\""
-	}
+	var data GetRoom
 	res, err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &data)
 	if err != nil {
 		return nil, transport.OperationResponse{}, err
@@ -93,11 +85,7 @@ const SubscribeMessageAddedDocument = `subscription SubscribeMessageAdded {
 `
 
 type MessageSubscribeMessageAdded struct {
-	Data *struct {
-		MessageAdded struct {
-			ID string "json:\"id\""
-		} "json:\"messageAdded\""
-	}
+	Data       *SubscribeMessageAdded
 	Error      error
 	Extensions transport.RawExtensions
 }

@@ -282,7 +282,7 @@ func (t *Ws) run(inctx context.Context) {
 				continue // Is expected as part of conn.ReadJSON timeout
 			}
 
-			t.printLog(GQL_INTERNAL, "READ JSON ERR", err)
+			//t.printLog(GQL_INTERNAL, "READ JSON ERR", err)
 
 			if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "EOF") {
 				t.printLog(GQL_INTERNAL, "EOF")

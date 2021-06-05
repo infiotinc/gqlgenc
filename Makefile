@@ -6,6 +6,9 @@ example-fullgen:
 	rm example/client/gen_client.go || true
 	rm example/server/generated/generated.go || true
 	rm example/server/model/models_gen.go || true
+	make example-genall
+
+example-genall:
 	make example-gqlgen
 	make example-gqlgenc
 
