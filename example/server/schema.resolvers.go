@@ -28,6 +28,30 @@ func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom,
 	}, nil
 }
 
+func (r *queryResolver) Medias(ctx context.Context) ([]model.Media, error) {
+	return []model.Media{
+		&model.Image{
+			Size: 100,
+		},
+		&model.Video{
+			Duration: 200,
+		},
+	}, nil
+}
+
+func (r *queryResolver) Books(ctx context.Context) ([]model.Book, error) {
+	return []model.Book{
+		&model.Textbook{
+			Title:   "Some textbook",
+			Courses: []string{"course 1", "course 2"},
+		},
+		&model.ColoringBook{
+			Title:  "Some Coloring Book",
+			Colors: []string{"red", "blue"},
+		},
+	}, nil
+}
+
 func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error) {
 	ch := make(chan *model.Message)
 	debug, _ := strconv.ParseBool(os.Getenv("GQLGENC_WS_LOG"))

@@ -15,19 +15,51 @@ type Client struct {
 	Client *client.Client
 }
 
+// Query
 type Query struct {
-	Room *model.Chatroom "json:\"room\""
+	Room   *model.Chatroom "json:\"room\""
+	Medias []model.Media   "json:\"medias\""
+	Books  []model.Book    "json:\"books\""
 }
+
+// Mutation
 type Mutation struct {
 	Post model.Message "json:\"post\""
 }
+
+// Subscription
 type Subscription struct {
 	MessageAdded model.Message "json:\"messageAdded\""
 }
+
+// Fragments
+
+// OperationResponses
 type GetRoom struct {
 	Room *struct {
 		Name string "json:\"name\""
 	} "json:\"room\""
+}
+type GetMedias struct {
+	Medias []*struct {
+		Image struct {
+			Size int64 "json:\"size\""
+		} "json:\",inline\""
+		Video struct {
+			Duration int64 "json:\"duration\""
+		} "json:\",inline\""
+	} "json:\"medias\""
+}
+type GetBooks struct {
+	Books []*struct {
+		Title    string "json:\"title\""
+		Textbook struct {
+			Courses []string "json:\"courses\""
+		} "json:\",inline\""
+		ColoringBook struct {
+			Colors []string "json:\"colors\""
+		} "json:\",inline\""
+	} "json:\"books\""
 }
 type SubscribeMessageAdded struct {
 	MessageAdded struct {
@@ -35,6 +67,7 @@ type SubscribeMessageAdded struct {
 	} "json:\"messageAdded\""
 }
 
+// Operations
 const GetRoomDocument = `query GetRoom ($name: String!) {
 	room(name: $name) {
 		name
@@ -70,6 +103,55 @@ func (c *Client) GetRoomCustom(ctx context.Context, name string) (*somelib.Custo
 
 	var data somelib.CustomRoom
 	res, err := c.Client.Query(ctx, "GetRoomCustom", GetRoomCustomDocument, vars, &data)
+	if err != nil {
+		return nil, transport.OperationResponse{}, err
+	}
+
+	return &data, res, nil
+}
+
+const GetMediasDocument = `query GetMedias {
+	medias {
+		... on Image {
+			size
+		}
+		... on Video {
+			duration
+		}
+	}
+}
+`
+
+func (c *Client) GetMedias(ctx context.Context) (*GetMedias, transport.OperationResponse, error) {
+	vars := map[string]interface{}{}
+
+	var data GetMedias
+	res, err := c.Client.Query(ctx, "GetMedias", GetMediasDocument, vars, &data)
+	if err != nil {
+		return nil, transport.OperationResponse{}, err
+	}
+
+	return &data, res, nil
+}
+
+const GetBooksDocument = `query GetBooks {
+	books {
+		title
+		... on Textbook {
+			courses
+		}
+		... on ColoringBook {
+			colors
+		}
+	}
+}
+`
+
+func (c *Client) GetBooks(ctx context.Context) (*GetBooks, transport.OperationResponse, error) {
+	vars := map[string]interface{}{}
+
+	var data GetBooks
+	res, err := c.Client.Query(ctx, "GetBooks", GetBooksDocument, vars, &data)
 	if err != nil {
 		return nil, transport.OperationResponse{}, err
 	}

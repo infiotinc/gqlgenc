@@ -6,10 +6,31 @@ import (
 	"time"
 )
 
+type Book interface {
+	IsBook()
+}
+
+type Media interface {
+	IsMedia()
+}
+
 type Chatroom struct {
 	Name     string     `json:"name"`
 	Messages []*Message `json:"messages"`
 }
+
+type ColoringBook struct {
+	Title  string   `json:"title"`
+	Colors []string `json:"colors"`
+}
+
+func (ColoringBook) IsBook() {}
+
+type Image struct {
+	Size int `json:"size"`
+}
+
+func (Image) IsMedia() {}
 
 type Message struct {
 	ID        string    `json:"id"`
@@ -17,3 +38,16 @@ type Message struct {
 	CreatedBy string    `json:"createdBy"`
 	CreatedAt time.Time `json:"createdAt"`
 }
+
+type Textbook struct {
+	Title   string   `json:"title"`
+	Courses []string `json:"courses"`
+}
+
+func (Textbook) IsBook() {}
+
+type Video struct {
+	Duration int `json:"duration"`
+}
+
+func (Video) IsMedia() {}

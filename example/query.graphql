@@ -10,6 +10,29 @@ query GetRoomCustom($name: String!) {
     }
 }
 
+query GetMedias {
+  medias {
+    ... on Image {
+      size
+    }
+    ... on Video {
+      duration
+    }
+  }
+}
+
+query GetBooks {
+  books {
+    title
+    ... on Textbook {
+      courses
+    }
+    ... on ColoringBook {
+      colors
+    }
+  }
+}
+
 subscription SubscribeMessageAdded {
     messageAdded(roomName: "test") {
         id

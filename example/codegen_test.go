@@ -68,3 +68,48 @@ func TestQueryCustomType(t *testing.T) {
 
 	assert.Equal(t, "Room: test", room.String())
 }
+
+func TestQueryUnion(t *testing.T) {
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.GetMedias(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Len(t, res.Medias, 2)
+
+	assert.Equal(t, 100, res.Medias[0].Image.Size)
+	assert.Equal(t, 200, res.Medias[1].Video.Duration)
+}
+
+func TestQueryInterface(t *testing.T) {
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.GetBooks(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Len(t, res.Books, 2)
+
+	assert.Equal(t, "Some textbook", res.Books[0].Title)
+	assert.Equal(t, []string{"course 1", "course 2"}, res.Books[0].Textbook.Courses)
+
+	assert.Equal(t, "Some Coloring Book", res.Books[1].Title)
+	assert.Equal(t, []string{"red", "blue"}, res.Books[1].ColoringBook.Colors)
+}

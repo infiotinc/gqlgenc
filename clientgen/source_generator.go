@@ -42,7 +42,7 @@ func (rs ResponseFieldList) StructType() *types.Struct {
 			}
 		} else {
 			vars = append(vars, types.NewVar(0, nil, templates.ToGo(field.Name), field.Type))
-			structTags = append(structTags, strings.Join(field.Tags, " "))
+			structTags = append(structTags, field.Tags...)
 		}
 	}
 
@@ -197,7 +197,6 @@ func (r *SourceGenerator) NewResponseField(selection ast.Selection) *ResponseFie
 			Name:             selection.TypeCondition,
 			Type:             fieldsResponseFields.StructType(),
 			IsInlineFragment: true,
-			Tags:             []string{fmt.Sprintf(`graphql:"... on %s"`, selection.TypeCondition)},
 			ResponseFields:   fieldsResponseFields,
 		}
 	}
