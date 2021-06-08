@@ -14,27 +14,17 @@ import (
 type Client struct {
 	Client *client.Client
 }
-
-// Query
 type Query struct {
 	Room   *model.Chatroom "json:\"room\""
 	Medias []model.Media   "json:\"medias\""
 	Books  []model.Book    "json:\"books\""
 }
-
-// Mutation
 type Mutation struct {
 	Post model.Message "json:\"post\""
 }
-
-// Subscription
 type Subscription struct {
 	MessageAdded model.Message "json:\"messageAdded\""
 }
-
-// Fragments
-
-// OperationResponses
 type GetRoom struct {
 	Room *struct {
 		Name string "json:\"name\""
@@ -44,10 +34,10 @@ type GetMedias struct {
 	Medias []*struct {
 		Image struct {
 			Size int64 "json:\"size\""
-		} "json:\",inline\""
+		}
 		Video struct {
 			Duration int64 "json:\"duration\""
-		} "json:\",inline\""
+		}
 	} "json:\"medias\""
 }
 type GetBooks struct {
@@ -55,10 +45,10 @@ type GetBooks struct {
 		Title    string "json:\"title\""
 		Textbook struct {
 			Courses []string "json:\"courses\""
-		} "json:\",inline\""
+		}
 		ColoringBook struct {
 			Colors []string "json:\"colors\""
-		} "json:\",inline\""
+		}
 	} "json:\"books\""
 }
 type SubscribeMessageAdded struct {
@@ -67,7 +57,6 @@ type SubscribeMessageAdded struct {
 	} "json:\"messageAdded\""
 }
 
-// Operations
 const GetRoomDocument = `query GetRoom ($name: String!) {
 	room(name: $name) {
 		name

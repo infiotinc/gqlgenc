@@ -26,13 +26,13 @@ func NewSource(schema *ast.Schema, queryDocument *ast.QueryDocument, sourceGener
 	}
 }
 
-type Fragment struct {
+type Type struct {
 	Name string
 	Type types.Type
 }
 
-func (s *Source) Fragments() ([]*Fragment, error) {
-	fragments := make([]*Fragment, 0, len(s.queryDocument.Fragments))
+func (s *Source) Fragments() ([]*Type, error) {
+	fragments := make([]*Type, 0, len(s.queryDocument.Fragments))
 	for _, fragment := range s.queryDocument.Fragments {
 		responseFields := s.sourceGenerator.NewResponseFields(fragment.SelectionSet)
 		name := fragment.Name
@@ -41,7 +41,7 @@ func (s *Source) Fragments() ([]*Fragment, error) {
 			continue
 		}
 
-		fragment := &Fragment{
+		fragment := &Type{
 			Name: name,
 			Type: responseFields.StructType(),
 		}
@@ -124,12 +124,12 @@ func queryString(queryDocument *ast.QueryDocument) string {
 type OperationResponse struct {
 	Operation *ast.OperationDefinition
 	Name      string
-	GenType   types.Type
 	RefType   types.Type
 }
 
-func (s *Source) OperationResponses() ([]*OperationResponse, error) {
+func (s *Source) OperationResponses() ([]*OperationResponse, []*Type, error) {
 	operationResponses := make([]*OperationResponse, 0, len(s.queryDocument.Operations))
+	opResTypes := make([]*Type, 0)
 	for _, operationResponse := range s.queryDocument.Operations {
 		responseFields := s.sourceGenerator.NewResponseFields(operationResponse.SelectionSet)
 		name := getResponseStructName(operationResponse, s.generateConfig)
@@ -145,7 +145,7 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 
 			typ, err := s.sourceGenerator.binder.FindTypeFromName(model)
 			if err != nil {
-				return nil, fmt.Errorf("cannot get type for %v: %w", name, err)
+				return nil, nil, fmt.Errorf("cannot get type for %v: %w", name, err)
 			}
 
 			opres.RefType = typ
@@ -156,7 +156,11 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 				fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), sname),
 			)
 
-			opres.GenType = responseFields.StructType()
+			opResTypes = append(opResTypes, &Type{
+				Name: sname,
+				Type: responseFields.StructType(),
+			})
+
 			opres.RefType = types.NewNamed(
 				types.NewTypeName(0, s.sourceGenerator.client.Pkg(), sname, nil),
 				types.NewInterfaceType([]*types.Func{}, []types.Type{}),
@@ -167,15 +171,10 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 		operationResponses = append(operationResponses, opres)
 	}
 
-	return operationResponses, nil
+	return operationResponses, opResTypes, nil
 }
 
-type Query struct {
-	Name string
-	Type types.Type
-}
-
-func (s *Source) Query() (*Query, error) {
+func (s *Source) Query() (*Type, error) {
 	fields, err := s.sourceGenerator.NewResponseFieldsByDefinition(s.schema.Query)
 	if err != nil {
 		return nil, fmt.Errorf("generate failed for query struct type : %w", err)
@@ -186,18 +185,13 @@ func (s *Source) Query() (*Query, error) {
 		fmt.Sprintf("%s.%s", s.sourceGenerator.client.Pkg(), templates.ToGo(s.schema.Query.Name)),
 	)
 
-	return &Query{
+	return &Type{
 		Name: s.schema.Query.Name,
 		Type: fields.StructType(),
 	}, nil
 }
 
-type Mutation struct {
-	Name string
-	Type types.Type
-}
-
-func (s *Source) Mutation() (*Mutation, error) {
+func (s *Source) Mutation() (*Type, error) {
 	fields, err := s.sourceGenerator.NewResponseFieldsByDefinition(s.schema.Mutation)
 	if err != nil {
 		return nil, fmt.Errorf("generate failed for mutation struct type : %w", err)
@@ -208,18 +202,13 @@ func (s *Source) Mutation() (*Mutation, error) {
 		fmt.Sprintf("%s.%s", s.sourceGenerator.client.Pkg(), templates.ToGo(s.schema.Mutation.Name)),
 	)
 
-	return &Mutation{
+	return &Type{
 		Name: s.schema.Mutation.Name,
 		Type: fields.StructType(),
 	}, nil
 }
 
-type Subscription struct {
-	Name string
-	Type types.Type
-}
-
-func (s *Source) Subscription() (*Subscription, error) {
+func (s *Source) Subscription() (*Type, error) {
 	fields, err := s.sourceGenerator.NewResponseFieldsByDefinition(s.schema.Subscription)
 	if err != nil {
 		return nil, fmt.Errorf("generate failed for subscription struct type : %w", err)
@@ -230,7 +219,7 @@ func (s *Source) Subscription() (*Subscription, error) {
 		fmt.Sprintf("%s.%s", s.sourceGenerator.client.Pkg(), templates.ToGo(s.schema.Subscription.Name)),
 	)
 
-	return &Subscription{
+	return &Type{
 		Name: s.schema.Subscription.Name,
 		Type: fields.StructType(),
 	}, nil
