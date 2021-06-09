@@ -4,9 +4,10 @@ package client
 
 import (
 	"context"
-	"example/client/model"
+	"encoding/json"
 	"example/somelib"
 
+	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/infiotinc/gqlgenc/client"
 	"github.com/infiotinc/gqlgenc/client/transport"
 )
@@ -14,47 +15,122 @@ import (
 type Client struct {
 	Client *client.Client
 }
-type Query struct {
-	Room   *model.Chatroom "json:\"room\""
-	Medias []model.Media   "json:\"medias\""
-	Books  []model.Book    "json:\"books\""
-}
-type Mutation struct {
-	Post model.Message "json:\"post\""
-}
-type Subscription struct {
-	MessageAdded model.Message "json:\"messageAdded\""
+type GetRoom_Room struct {
+	Name string "json:\"name\""
 }
 type GetRoom struct {
-	Room *struct {
-		Name string "json:\"name\""
-	} "json:\"room\""
+	Room GetRoom_Room "json:\"room\""
 }
+type GetMedias_Image struct {
+	Size     int64               "json:\"size\""
+	Typename *introspection.Type "json:\"__typename\""
+}
+type GetMedias_Video struct {
+	Duration int64               "json:\"duration\""
+	Typename *introspection.Type "json:\"__typename\""
+}
+type GetMedias_Medias struct {
+	Image *GetMedias_Image
+	Video *GetMedias_Video
+}
+
+func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
+	type Alias GetMedias_Medias
+	var r struct {
+		Typename string `json:"__typename"`
+		Alias
+	}
+
+	err := json.Unmarshal(data, &r)
+	if err != nil {
+		return err
+	}
+
+	*t = GetMedias_Medias(r.Alias)
+
+	switch r.Typename {
+	case "Image":
+		var a GetMedias_Image
+		err = json.Unmarshal(data, &a)
+		if err != nil {
+			return err
+		}
+
+		t.Image = &a
+	case "Video":
+		var a GetMedias_Video
+		err = json.Unmarshal(data, &a)
+		if err != nil {
+			return err
+		}
+
+		t.Video = &a
+	}
+
+	return nil
+}
+
 type GetMedias struct {
-	Medias []*struct {
-		Image struct {
-			Size int64 "json:\"size\""
-		}
-		Video struct {
-			Duration int64 "json:\"duration\""
-		}
-	} "json:\"medias\""
+	Medias []GetMedias_Medias "json:\"medias\""
 }
+type GetBooks_Textbook struct {
+	Courses  []string            "json:\"courses\""
+	Typename *introspection.Type "json:\"__typename\""
+}
+type GetBooks_ColoringBook struct {
+	Colors   []string            "json:\"colors\""
+	Typename *introspection.Type "json:\"__typename\""
+}
+type GetBooks_Books struct {
+	Title        string "json:\"title\""
+	Textbook     *GetBooks_Textbook
+	ColoringBook *GetBooks_ColoringBook
+}
+
+func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
+	type Alias GetBooks_Books
+	var r struct {
+		Typename string `json:"__typename"`
+		Alias
+	}
+
+	err := json.Unmarshal(data, &r)
+	if err != nil {
+		return err
+	}
+
+	*t = GetBooks_Books(r.Alias)
+
+	switch r.Typename {
+	case "ColoringBook":
+		var a GetBooks_ColoringBook
+		err = json.Unmarshal(data, &a)
+		if err != nil {
+			return err
+		}
+
+		t.ColoringBook = &a
+	case "Textbook":
+		var a GetBooks_Textbook
+		err = json.Unmarshal(data, &a)
+		if err != nil {
+			return err
+		}
+
+		t.Textbook = &a
+	}
+
+	return nil
+}
+
 type GetBooks struct {
-	Books []*struct {
-		Title    string "json:\"title\""
-		Textbook struct {
-			Courses []string "json:\"courses\""
-		}
-		ColoringBook struct {
-			Colors []string "json:\"colors\""
-		}
-	} "json:\"books\""
+	Books []GetBooks_Books "json:\"books\""
+}
+type SubscribeMessageAdded_MessageAdded struct {
+	ID string "json:\"id\""
 }
 type SubscribeMessageAdded struct {
-	MessageAdded struct {
-		ID string "json:\"id\""
-	} "json:\"messageAdded\""
+	MessageAdded SubscribeMessageAdded_MessageAdded "json:\"messageAdded\""
 }
 
 const GetRoomDocument = `query GetRoom ($name: String!) {
@@ -103,9 +179,11 @@ const GetMediasDocument = `query GetMedias {
 	medias {
 		... on Image {
 			size
+			__typename: 
 		}
 		... on Video {
 			duration
+			__typename: 
 		}
 	}
 }
@@ -128,9 +206,11 @@ const GetBooksDocument = `query GetBooks {
 		title
 		... on Textbook {
 			courses
+			__typename: 
 		}
 		... on ColoringBook {
 			colors
+			__typename: 
 		}
 	}
 }

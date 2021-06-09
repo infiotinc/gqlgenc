@@ -19,7 +19,39 @@
 {{- end }}
 
 {{- range $name, $element := .Types }}
-	type  {{ .Name | go  }} {{ .Type | ref }}
+	type {{ .Name  }} {{ .Type | ref }}
+
+    {{- if .UnmarshalTypes }}
+    func (t *{{ .Name }}) UnmarshalJSON(data []byte) error {
+        type Alias {{ .Name }}
+        var r struct {
+            Typename string `json:"__typename"`
+            Alias
+        }
+
+        err := json.Unmarshal(data, &r)
+        if err != nil {
+            return err
+        }
+
+        *t = {{ .Name }}(r.Alias)
+
+        switch r.Typename {
+        {{- range $typename, $target := .UnmarshalTypes }}
+            case "{{ $typename }}":
+                var a {{ $target.Type | ref }}
+                err = json.Unmarshal(data, &a)
+                if err != nil {
+                    return err
+                }
+
+                t.{{ $target.Name }} = &a
+        {{- end }}
+        }
+
+        return nil
+    }
+    {{- end }}
 {{- end }}
 
 {{- range $op := .Operations }}

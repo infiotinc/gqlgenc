@@ -26,38 +26,33 @@ func NewSource(schema *ast.Schema, queryDocument *ast.QueryDocument, sourceGener
 	}
 }
 
-type Type struct {
-	Name string
+type TypeTarget struct {
 	Type types.Type
+	Name string
+}
+
+type Type struct {
+	Name           string
+	Type           types.Type
+	UnmarshalTypes map[string]TypeTarget
 }
 
 func (s *Source) Fragments() ([]*Type, error) {
-	fragments := make([]*Type, 0, len(s.queryDocument.Fragments))
+	genTypes := make([]*Type, 0, len(s.queryDocument.Fragments))
 	for _, fragment := range s.queryDocument.Fragments {
-		responseFields := s.sourceGenerator.NewResponseFields(fragment.SelectionSet)
-		name := fragment.Name
-		if s.sourceGenerator.cfg.Models.Exists(name) {
-			fmt.Printf("%s is already declared: %v\n", name, s.sourceGenerator.cfg.Models[name].Model)
-			continue
-		}
+		name := templates.ToGo(fragment.Name)
 
-		fragment := &Type{
-			Name: name,
-			Type: responseFields.StructType(),
-		}
+		_ = s.sourceGenerator.namedType(name, func() types.Type {
+			responseFields, rfGenTypes := s.sourceGenerator.NewResponseFields(name, fragment.SelectionSet)
+			genTypes = append(genTypes, rfGenTypes...)
 
-		fragments = append(fragments, fragment)
+			typ, rfGenTypes := s.sourceGenerator.genStruct("", name, responseFields)
+			genTypes = append(genTypes, rfGenTypes...)
+			return typ
+		})
 	}
 
-	for _, fragment := range fragments {
-		name := fragment.Name
-		s.sourceGenerator.cfg.Models.Add(
-			name,
-			fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), templates.ToGo(name)),
-		)
-	}
-
-	return fragments, nil
+	return genTypes, nil
 }
 
 type Operation struct {
@@ -73,7 +68,7 @@ func NewOperation(operation *OperationResponse, queryDocument *ast.QueryDocument
 	return &Operation{
 		Name:                operation.Name,
 		OperationType:       string(operation.Operation.Operation),
-		ResponseType:        operation.RefType,
+		ResponseType:        operation.Type,
 		Operation:           queryString(queryDocument),
 		Args:                args,
 		VariableDefinitions: operation.Operation.VariableDefinitions,
@@ -124,14 +119,13 @@ func queryString(queryDocument *ast.QueryDocument) string {
 type OperationResponse struct {
 	Operation *ast.OperationDefinition
 	Name      string
-	RefType   types.Type
+	Type      types.Type
 }
 
 func (s *Source) OperationResponses() ([]*OperationResponse, []*Type, error) {
 	operationResponses := make([]*OperationResponse, 0, len(s.queryDocument.Operations))
-	opResTypes := make([]*Type, 0)
+	genTypes := make([]*Type, 0)
 	for _, operationResponse := range s.queryDocument.Operations {
-		responseFields := s.sourceGenerator.NewResponseFields(operationResponse.SelectionSet)
 		name := getResponseStructName(operationResponse, s.generateConfig)
 
 		opres := &OperationResponse{
@@ -139,90 +133,20 @@ func (s *Source) OperationResponses() ([]*OperationResponse, []*Type, error) {
 			Name:      name,
 		}
 
-		if s.sourceGenerator.cfg.Models.Exists(name) {
-			model := s.sourceGenerator.cfg.Models[name].Model[0]
-			fmt.Printf("%s is already declared: %v\n", name, model)
+		namedType := s.sourceGenerator.namedType(name, func() types.Type {
+			responseFields, rfGenTypes := s.sourceGenerator.NewResponseFields(name, operationResponse.SelectionSet)
+			genTypes = append(genTypes, rfGenTypes...)
 
-			typ, err := s.sourceGenerator.binder.FindTypeFromName(model)
-			if err != nil {
-				return nil, nil, fmt.Errorf("cannot get type for %v: %w", name, err)
-			}
-
-			opres.RefType = typ
-		} else {
-			sname := templates.ToGo(name)
-			s.sourceGenerator.cfg.Models.Add(
-				name,
-				fmt.Sprintf("%s.%s", s.sourceGenerator.client.ImportPath(), sname),
-			)
-
-			opResTypes = append(opResTypes, &Type{
-				Name: sname,
-				Type: responseFields.StructType(),
-			})
-
-			opres.RefType = types.NewNamed(
-				types.NewTypeName(0, s.sourceGenerator.client.Pkg(), sname, nil),
-				types.NewInterfaceType([]*types.Func{}, []types.Type{}),
-				nil,
-			)
-		}
+			typ, rfGenTypes := s.sourceGenerator.genStruct("", name, responseFields)
+			genTypes = append(genTypes, rfGenTypes...)
+			return typ
+		})
+		opres.Type = namedType
 
 		operationResponses = append(operationResponses, opres)
 	}
 
-	return operationResponses, opResTypes, nil
-}
-
-func (s *Source) Query() (*Type, error) {
-	fields, err := s.sourceGenerator.NewResponseFieldsByDefinition(s.schema.Query)
-	if err != nil {
-		return nil, fmt.Errorf("generate failed for query struct type : %w", err)
-	}
-
-	s.sourceGenerator.cfg.Models.Add(
-		s.schema.Query.Name,
-		fmt.Sprintf("%s.%s", s.sourceGenerator.client.Pkg(), templates.ToGo(s.schema.Query.Name)),
-	)
-
-	return &Type{
-		Name: s.schema.Query.Name,
-		Type: fields.StructType(),
-	}, nil
-}
-
-func (s *Source) Mutation() (*Type, error) {
-	fields, err := s.sourceGenerator.NewResponseFieldsByDefinition(s.schema.Mutation)
-	if err != nil {
-		return nil, fmt.Errorf("generate failed for mutation struct type : %w", err)
-	}
-
-	s.sourceGenerator.cfg.Models.Add(
-		s.schema.Mutation.Name,
-		fmt.Sprintf("%s.%s", s.sourceGenerator.client.Pkg(), templates.ToGo(s.schema.Mutation.Name)),
-	)
-
-	return &Type{
-		Name: s.schema.Mutation.Name,
-		Type: fields.StructType(),
-	}, nil
-}
-
-func (s *Source) Subscription() (*Type, error) {
-	fields, err := s.sourceGenerator.NewResponseFieldsByDefinition(s.schema.Subscription)
-	if err != nil {
-		return nil, fmt.Errorf("generate failed for subscription struct type : %w", err)
-	}
-
-	s.sourceGenerator.cfg.Models.Add(
-		s.schema.Subscription.Name,
-		fmt.Sprintf("%s.%s", s.sourceGenerator.client.Pkg(), templates.ToGo(s.schema.Subscription.Name)),
-	)
-
-	return &Type{
-		Name: s.schema.Subscription.Name,
-		Type: fields.StructType(),
-	}, nil
+	return operationResponses, genTypes, nil
 }
 
 func getResponseStructName(operation *ast.OperationDefinition, generateConfig *config.GenerateConfig) string {

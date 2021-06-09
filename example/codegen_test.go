@@ -86,8 +86,8 @@ func TestQueryUnion(t *testing.T) {
 
 	assert.Len(t, res.Medias, 2)
 
-	assert.Equal(t, 100, res.Medias[0].Image.Size)
-	assert.Equal(t, 200, res.Medias[1].Video.Duration)
+	assert.Equal(t, int64(100), res.Medias[0].Image.Size)
+	assert.Equal(t, int64(200), res.Medias[1].Video.Duration)
 }
 
 func TestQueryInterface(t *testing.T) {

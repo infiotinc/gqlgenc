@@ -55,24 +55,6 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 
 	types := make([]*Type, 0)
 
-	query, err := source.Query()
-	if err != nil {
-		return fmt.Errorf("generating query object: %w", err)
-	}
-	types = append(types, query)
-
-	mutation, err := source.Mutation()
-	if err != nil {
-		return fmt.Errorf("generating mutation object: %w", err)
-	}
-	types = append(types, mutation)
-
-	subscription, err := source.Subscription()
-	if err != nil {
-		return fmt.Errorf("generating subscription object: %w", err)
-	}
-	types = append(types, subscription)
-
 	fragments, err := source.Fragments()
 	if err != nil {
 		return fmt.Errorf("generating fragment failed: %w", err)
