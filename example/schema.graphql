@@ -42,8 +42,12 @@ type Query {
     books: [Book!]!
 }
 
+input PostCreateInput {
+    text: String!
+}
+
 type Mutation {
-    post(text: String!, username: String!, roomName: String!): Message!
+    post(input: PostCreateInput!): Message!
 }
 
 type Subscription {

@@ -69,7 +69,7 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		Post func(childComplexity int, text string, username string, roomName string) int
+		Post func(childComplexity int, input model.PostCreateInput) int
 	}
 
 	Query struct {
@@ -93,7 +93,7 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	Post(ctx context.Context, text string, username string, roomName string) (*model.Message, error)
+	Post(ctx context.Context, input model.PostCreateInput) (*model.Message, error)
 }
 type QueryResolver interface {
 	Room(ctx context.Context, name string) (*model.Chatroom, error)
@@ -192,7 +192,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.Post(childComplexity, args["text"].(string), args["username"].(string), args["roomName"].(string)), true
+		return e.complexity.Mutation.Post(childComplexity, args["input"].(model.PostCreateInput)), true
 
 	case "Query.books":
 		if e.complexity.Query.Books == nil {
@@ -378,8 +378,12 @@ type Query {
     books: [Book!]!
 }
 
+input PostCreateInput {
+    text: String!
+}
+
 type Mutation {
-    post(text: String!, username: String!, roomName: String!): Message!
+    post(input: PostCreateInput!): Message!
 }
 
 type Subscription {
@@ -396,33 +400,15 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_post_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["text"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("text"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	var arg0 model.PostCreateInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNPostCreateInput2exampleᚋserverᚋmodelᚐPostCreateInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["text"] = arg0
-	var arg1 string
-	if tmp, ok := rawArgs["username"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
-		arg1, err = ec.unmarshalNString2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["username"] = arg1
-	var arg2 string
-	if tmp, ok := rawArgs["roomName"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roomName"))
-		arg2, err = ec.unmarshalNString2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["roomName"] = arg2
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -849,7 +835,7 @@ func (ec *executionContext) _Mutation_post(ctx context.Context, field graphql.Co
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().Post(rctx, args["text"].(string), args["username"].(string), args["roomName"].(string))
+		return ec.resolvers.Mutation().Post(rctx, args["input"].(model.PostCreateInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2290,6 +2276,26 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputPostCreateInput(ctx context.Context, obj interface{}) (model.PostCreateInput, error) {
+	var it model.PostCreateInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "text":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("text"))
+			it.Text, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -3089,6 +3095,11 @@ func (ec *executionContext) marshalNMessage2ᚖexampleᚋserverᚋmodelᚐMessag
 		return graphql.Null
 	}
 	return ec._Message(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNPostCreateInput2exampleᚋserverᚋmodelᚐPostCreateInput(ctx context.Context, v interface{}) (model.PostCreateInput, error) {
+	res, err := ec.unmarshalInputPostCreateInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {

@@ -126,9 +126,7 @@ func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields Re
 func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selection) (*ResponseField, []*Type) {
 	switch selection := selection.(type) {
 	case *ast.Field:
-		genTypes := make([]*Type, 0)
-		fieldsResponseFields, rfGenTypes := r.NewResponseFields(prefix, selection.SelectionSet)
-		genTypes = append(genTypes, rfGenTypes...)
+		fieldsResponseFields, genTypes := r.NewResponseFields(prefix, selection.SelectionSet)
 
 		var baseType types.Type
 		switch {
@@ -138,8 +136,7 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 			// if a child field is fragment, this field type became fragment.
 			baseType = fieldsResponseFields[0].Type
 		case fieldsResponseFields.IsStructType():
-			name := templates.ToGo(selection.Name)
-			typ, rsGenTypes := r.genStruct(prefix, name, fieldsResponseFields)
+			typ, rsGenTypes := r.genStruct(prefix, templates.ToGo(selection.Name), fieldsResponseFields)
 			genTypes = append(genTypes, rsGenTypes...)
 			baseType = typ
 		default:
@@ -166,7 +163,6 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 	case *ast.FragmentSpread:
 		// この構造体はテンプレート側で使われることはなく、ast.FieldでFragment判定するために使用する
 		fieldsResponseFields, genTypes := r.NewResponseFields(prefix, selection.Definition.SelectionSet)
-
 		typ, rsGenTypes := r.genStruct(prefix, selection.Name, fieldsResponseFields)
 		genTypes = append(genTypes, rsGenTypes...)
 
@@ -179,7 +175,8 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 
 	case *ast.InlineFragment:
 		selection.SelectionSet = append(selection.SelectionSet, &ast.Field{
-			Alias:             "__typename",
+			Name:  "__typename",
+			Alias: "__typename",
 			Definition: &ast.FieldDefinition{
 				Name: "Typename",
 				Type: ast.NamedType("__Type", nil),

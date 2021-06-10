@@ -8,6 +8,8 @@ import (
 )
 
 func TestSubscription(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cli, td, _ := splitcli(ctx)
@@ -34,6 +36,8 @@ func TestSubscription(t *testing.T) {
 }
 
 func TestQuery(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cli, td, _ := splitcli(ctx)
@@ -52,6 +56,8 @@ func TestQuery(t *testing.T) {
 }
 
 func TestQueryCustomType(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cli, td, _ := splitcli(ctx)
@@ -70,6 +76,8 @@ func TestQueryCustomType(t *testing.T) {
 }
 
 func TestQueryUnion(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cli, td, _ := splitcli(ctx)
@@ -91,6 +99,8 @@ func TestQueryUnion(t *testing.T) {
 }
 
 func TestQueryInterface(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cli, td, _ := splitcli(ctx)
@@ -112,4 +122,26 @@ func TestQueryInterface(t *testing.T) {
 
 	assert.Equal(t, "Some Coloring Book", res.Books[1].Title)
 	assert.Equal(t, []string{"red", "blue"}, res.Books[1].ColoringBook.Colors)
+}
+
+func TestMutationInput(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.CreatePost(ctx, client.PostCreateInput{
+		Text: "some text",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "some text", res.Post.Text)
 }

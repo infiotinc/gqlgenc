@@ -38,3 +38,10 @@ subscription SubscribeMessageAdded {
         id
     }
 }
+
+mutation CreatePost($input: PostCreateInput!) {
+    post(input: $input) {
+        id
+        text
+    }
+}

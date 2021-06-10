@@ -132,6 +132,13 @@ type SubscribeMessageAdded_MessageAdded struct {
 type SubscribeMessageAdded struct {
 	MessageAdded SubscribeMessageAdded_MessageAdded "json:\"messageAdded\""
 }
+type CreatePost_Post struct {
+	ID   string "json:\"id\""
+	Text string "json:\"text\""
+}
+type CreatePost struct {
+	Post CreatePost_Post "json:\"post\""
+}
 
 const GetRoomDocument = `query GetRoom ($name: String!) {
 	room(name: $name) {
@@ -179,11 +186,11 @@ const GetMediasDocument = `query GetMedias {
 	medias {
 		... on Image {
 			size
-			__typename: 
+			__typename
 		}
 		... on Video {
 			duration
-			__typename: 
+			__typename
 		}
 	}
 }
@@ -206,11 +213,11 @@ const GetBooksDocument = `query GetBooks {
 		title
 		... on Textbook {
 			courses
-			__typename: 
+			__typename
 		}
 		... on ColoringBook {
 			colors
-			__typename: 
+			__typename
 		}
 	}
 }
@@ -276,4 +283,26 @@ func (c *Client) SubscribeMessageAdded(ctx context.Context) (<-chan MessageSubsc
 	}()
 
 	return ch, res.Close
+}
+
+const CreatePostDocument = `mutation CreatePost ($input: PostCreateInput!) {
+	post(input: $input) {
+		id
+		text
+	}
+}
+`
+
+func (c *Client) CreatePost(ctx context.Context, input PostCreateInput) (*CreatePost, transport.OperationResponse, error) {
+	vars := map[string]interface{}{
+		"input": input,
+	}
+
+	var data CreatePost
+	res, err := c.Client.Mutation(ctx, "CreatePost", CreatePostDocument, vars, &data)
+	if err != nil {
+		return nil, transport.OperationResponse{}, err
+	}
+
+	return &data, res, nil
 }

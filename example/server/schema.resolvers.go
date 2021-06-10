@@ -13,8 +13,10 @@ import (
 	"strconv"
 )
 
-func (r *mutationResolver) Post(ctx context.Context, text string, username string, roomName string) (*model.Message, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) Post(ctx context.Context, input model.PostCreateInput) (*model.Message, error) {
+	return &model.Message{
+		Text: input.Text,
+	}, nil
 }
 
 func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom, error) {
