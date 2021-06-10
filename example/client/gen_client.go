@@ -29,8 +29,8 @@ type GetMedias_Video struct {
 	Typename string "json:\"__typename\""
 }
 type GetMedias_Medias struct {
-	Image *GetMedias_Image
-	Video *GetMedias_Video
+	Image *GetMedias_Image "json:\"-\""
+	Video *GetMedias_Video "json:\"-\""
 }
 
 func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
@@ -81,9 +81,9 @@ type GetBooks_ColoringBook struct {
 	Typename string   "json:\"__typename\""
 }
 type GetBooks_Books struct {
-	Title        string "json:\"title\""
-	Textbook     *GetBooks_Textbook
-	ColoringBook *GetBooks_ColoringBook
+	Title        string                 "json:\"title\""
+	Textbook     *GetBooks_Textbook     "json:\"-\""
+	ColoringBook *GetBooks_ColoringBook "json:\"-\""
 }
 
 func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {

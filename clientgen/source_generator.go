@@ -149,14 +149,12 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 		// return pointer type then optional type or slice pointer then slice type of definition in GraphQL.
 		typ := r.binder.CopyModifiersFromAst(selection.Definition.Type, baseType)
 
-		tags := []string{
-			fmt.Sprintf(`json:"%s"`, selection.Alias),
-		}
-
 		return &ResponseField{
-			Name:           selection.Alias,
-			Type:           typ,
-			Tags:           tags,
+			Name: selection.Alias,
+			Type: typ,
+			Tags: []string{
+				fmt.Sprintf(`json:"%s"`, selection.Alias),
+			},
 			ResponseFields: fieldsResponseFields,
 		}, genTypes
 
@@ -196,6 +194,7 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 			Type:             typ,
 			IsInlineFragment: true,
 			ResponseFields:   fieldsResponseFields,
+			Tags:             []string{`json:"-"`},
 		}, genTypes
 	}
 
