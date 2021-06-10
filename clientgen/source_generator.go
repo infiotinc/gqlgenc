@@ -179,7 +179,7 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 			Alias: "__typename",
 			Definition: &ast.FieldDefinition{
 				Name: "Typename",
-				Type: ast.NamedType("__Type", nil),
+				Type: ast.NonNullNamedType("String", nil),
 				Arguments: ast.ArgumentDefinitionList{
 					{Name: "name", Type: ast.NonNullNamedType("String", nil)},
 				},

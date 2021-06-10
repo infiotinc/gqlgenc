@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"example/somelib"
 
-	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/infiotinc/gqlgenc/client"
 	"github.com/infiotinc/gqlgenc/client/transport"
 )
@@ -22,12 +21,12 @@ type GetRoom struct {
 	Room GetRoom_Room "json:\"room\""
 }
 type GetMedias_Image struct {
-	Size     int64               "json:\"size\""
-	Typename *introspection.Type "json:\"__typename\""
+	Size     int64  "json:\"size\""
+	Typename string "json:\"__typename\""
 }
 type GetMedias_Video struct {
-	Duration int64               "json:\"duration\""
-	Typename *introspection.Type "json:\"__typename\""
+	Duration int64  "json:\"duration\""
+	Typename string "json:\"__typename\""
 }
 type GetMedias_Medias struct {
 	Image *GetMedias_Image
@@ -74,12 +73,12 @@ type GetMedias struct {
 	Medias []GetMedias_Medias "json:\"medias\""
 }
 type GetBooks_Textbook struct {
-	Courses  []string            "json:\"courses\""
-	Typename *introspection.Type "json:\"__typename\""
+	Courses  []string "json:\"courses\""
+	Typename string   "json:\"__typename\""
 }
 type GetBooks_ColoringBook struct {
-	Colors   []string            "json:\"colors\""
-	Typename *introspection.Type "json:\"__typename\""
+	Colors   []string "json:\"colors\""
+	Typename string   "json:\"__typename\""
 }
 type GetBooks_Books struct {
 	Title        string "json:\"title\""
