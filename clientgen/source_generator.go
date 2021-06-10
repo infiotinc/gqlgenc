@@ -41,10 +41,47 @@ func (rs ResponseFieldList) IsStructType() bool {
 	return len(rs) > 0 && !rs.IsFragment()
 }
 
+type genType struct {
+	name string
+	typ  *Type
+}
+
 type SourceGenerator struct {
 	cfg    *config.Config
 	binder *config.Binder
 	client config.PackageConfig
+
+	genTypes []genType
+}
+
+func (r *SourceGenerator) RegisterGenType(name string, typ *Type) {
+	if gt := r.GetGenType(name); gt != nil {
+		panic(name + ": gen type already defined")
+	}
+
+	r.genTypes = append(r.genTypes, genType{
+		name: name,
+		typ:  typ,
+	})
+}
+
+func (r *SourceGenerator) GetGenType(name string) *Type {
+	for _, gt := range r.genTypes {
+		if gt.name == name {
+			return gt.typ
+		}
+	}
+
+	return nil
+}
+
+func (r *SourceGenerator) GenTypes() []*Type {
+	typs := make([]*Type, 0)
+	for _, gt := range r.genTypes {
+		typs = append(typs, gt.typ)
+	}
+
+	return typs
 }
 
 func NewSourceGenerator(cfg *config.Config, client config.PackageConfig) *SourceGenerator {
@@ -55,19 +92,40 @@ func NewSourceGenerator(cfg *config.Config, client config.PackageConfig) *Source
 	}
 }
 
-func (r *SourceGenerator) NewResponseFields(prefix string, selectionSet ast.SelectionSet) (ResponseFieldList, []*Type) {
-	responseFields := make(ResponseFieldList, 0, len(selectionSet))
-	genTypes := make([]*Type, 0)
-	for _, selection := range selectionSet {
-		rf, rfGenTypes := r.NewResponseField(prefix, selection)
-		genTypes = append(genTypes, rfGenTypes...)
+func (r *SourceGenerator) NewResponseFields(prefix string, selectionSet *ast.SelectionSet) ResponseFieldList {
+L:
+	for _, field := range *selectionSet {
+		switch field.(type) {
+		case *ast.InlineFragment:
+			*selectionSet = append(ast.SelectionSet{&ast.Field{
+				Name:  "__typename",
+				Alias: "__typename",
+				Definition: &ast.FieldDefinition{
+					Name: "Typename",
+					Type: ast.NonNullNamedType("String", nil),
+					Arguments: ast.ArgumentDefinitionList{
+						{Name: "name", Type: ast.NonNullNamedType("String", nil)},
+					},
+				},
+			}}, *selectionSet...)
+			break L
+		}
+	}
+
+	responseFields := make(ResponseFieldList, 0, len(*selectionSet))
+	for _, selection := range *selectionSet {
+		rf := r.NewResponseField(prefix, selection)
 		responseFields = append(responseFields, rf)
 	}
 
-	return responseFields, genTypes
+	return responseFields
 }
 
 func (r *SourceGenerator) namedType(name string, gen func() types.Type) types.Type {
+	if gt := r.GetGenType(name); gt != nil {
+		return gt.RefType
+	}
+
 	if r.cfg.Models.Exists(name) {
 		model := r.cfg.Models[name].Model[0]
 		fmt.Printf("%s is already declared: %v\n", name, model)
@@ -88,7 +146,7 @@ func (r *SourceGenerator) namedType(name string, gen func() types.Type) types.Ty
 	}
 }
 
-func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields ResponseFieldList) (types.Type, []*Type) {
+func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields ResponseFieldList) types.Type {
 	fullName := name
 	if prefix != "" {
 		fullName = prefix + "_" + fullName
@@ -112,21 +170,26 @@ func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields Re
 		tags = append(tags, strings.Join(field.Tags, " "))
 	}
 
-	return types.NewNamed(
-			types.NewTypeName(0, r.client.Pkg(), fullName, nil),
-			types.NewInterfaceType([]*types.Func{}, []types.Type{}),
-			nil,
-		), []*Type{{
-			Name:           fullName,
-			Type:           types.NewStruct(vars, tags),
-			UnmarshalTypes: unmarshalTypes,
-		}}
+	refType := types.NewNamed(
+		types.NewTypeName(0, r.client.Pkg(), fullName, nil),
+		types.NewInterfaceType([]*types.Func{}, []types.Type{}),
+		nil,
+	)
+
+	r.RegisterGenType(fullName, &Type{
+		Name:           fullName,
+		Type:           types.NewStruct(vars, tags),
+		RefType:        refType,
+		UnmarshalTypes: unmarshalTypes,
+	})
+
+	return refType
 }
 
-func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selection) (*ResponseField, []*Type) {
+func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selection) *ResponseField {
 	switch selection := selection.(type) {
 	case *ast.Field:
-		fieldsResponseFields, genTypes := r.NewResponseFields(prefix, selection.SelectionSet)
+		fieldsResponseFields := r.NewResponseFields(prefix, &selection.SelectionSet)
 
 		var baseType types.Type
 		switch {
@@ -136,8 +199,7 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 			// if a child field is fragment, this field type became fragment.
 			baseType = fieldsResponseFields[0].Type
 		case fieldsResponseFields.IsStructType():
-			typ, rsGenTypes := r.genStruct(prefix, templates.ToGo(selection.Name), fieldsResponseFields)
-			genTypes = append(genTypes, rsGenTypes...)
+			typ := r.genStruct(prefix, templates.ToGo(selection.Name), fieldsResponseFields)
 			baseType = typ
 		default:
 			// ここにきたらバグ
@@ -156,38 +218,23 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 				fmt.Sprintf(`json:"%s"`, selection.Alias),
 			},
 			ResponseFields: fieldsResponseFields,
-		}, genTypes
+		}
 
 	case *ast.FragmentSpread:
-		// この構造体はテンプレート側で使われることはなく、ast.FieldでFragment判定するために使用する
-		fieldsResponseFields, genTypes := r.NewResponseFields(prefix, selection.Definition.SelectionSet)
-		typ, rsGenTypes := r.genStruct(prefix, selection.Name, fieldsResponseFields)
-		genTypes = append(genTypes, rsGenTypes...)
+		fieldsResponseFields := r.NewResponseFields(prefix, &selection.Definition.SelectionSet)
+		typ := r.GetGenType(selection.Definition.Name).RefType
 
 		return &ResponseField{
 			Name:             selection.Name,
 			Type:             typ,
 			IsFragmentSpread: true,
 			ResponseFields:   fieldsResponseFields,
-		}, genTypes
+		}
 
 	case *ast.InlineFragment:
-		selection.SelectionSet = append(selection.SelectionSet, &ast.Field{
-			Name:  "__typename",
-			Alias: "__typename",
-			Definition: &ast.FieldDefinition{
-				Name: "Typename",
-				Type: ast.NonNullNamedType("String", nil),
-				Arguments: ast.ArgumentDefinitionList{
-					{Name: "name", Type: ast.NonNullNamedType("String", nil)},
-				},
-			},
-		})
-
 		// InlineFragmentは子要素をそのままstructとしてもつので、ここで、構造体の型を作成します
-		fieldsResponseFields, genTypes := r.NewResponseFields(prefix, selection.SelectionSet)
-		typ, rsGenTypes := r.genStruct(prefix, selection.TypeCondition, fieldsResponseFields)
-		genTypes = append(genTypes, rsGenTypes...)
+		fieldsResponseFields := r.NewResponseFields(prefix, &selection.SelectionSet)
+		typ := r.genStruct(prefix, selection.TypeCondition, fieldsResponseFields)
 
 		return &ResponseField{
 			Name:             selection.TypeCondition,
@@ -195,7 +242,7 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 			IsInlineFragment: true,
 			ResponseFields:   fieldsResponseFields,
 			Tags:             []string{`json:"-"`},
-		}, genTypes
+		}
 	}
 
 	panic("unexpected selection type")

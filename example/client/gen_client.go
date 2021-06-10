@@ -14,38 +14,40 @@ import (
 type Client struct {
 	Client *client.Client
 }
+type RoomFragment struct {
+	Name string "json:\"name\""
+}
 type GetRoom_Room struct {
 	Name string "json:\"name\""
 }
 type GetRoom struct {
 	Room GetRoom_Room "json:\"room\""
 }
+type GetRoomFragment struct {
+	Room RoomFragment "json:\"room\""
+}
 type GetMedias_Image struct {
-	Size     int64  "json:\"size\""
-	Typename string "json:\"__typename\""
+	Size int64 "json:\"size\""
 }
 type GetMedias_Video struct {
-	Duration int64  "json:\"duration\""
-	Typename string "json:\"__typename\""
+	Duration int64 "json:\"duration\""
 }
 type GetMedias_Medias struct {
-	Image *GetMedias_Image "json:\"-\""
-	Video *GetMedias_Video "json:\"-\""
+	Typename string           "json:\"__typename\""
+	Image    *GetMedias_Image "json:\"-\""
+	Video    *GetMedias_Video "json:\"-\""
 }
 
 func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
 	type Alias GetMedias_Medias
-	var r struct {
-		Typename string `json:"__typename"`
-		Alias
-	}
+	var r Alias
 
 	err := json.Unmarshal(data, &r)
 	if err != nil {
 		return err
 	}
 
-	*t = GetMedias_Medias(r.Alias)
+	*t = GetMedias_Medias(r)
 
 	switch r.Typename {
 	case "Image":
@@ -73,14 +75,13 @@ type GetMedias struct {
 	Medias []GetMedias_Medias "json:\"medias\""
 }
 type GetBooks_Textbook struct {
-	Courses  []string "json:\"courses\""
-	Typename string   "json:\"__typename\""
+	Courses []string "json:\"courses\""
 }
 type GetBooks_ColoringBook struct {
-	Colors   []string "json:\"colors\""
-	Typename string   "json:\"__typename\""
+	Colors []string "json:\"colors\""
 }
 type GetBooks_Books struct {
+	Typename     string                 "json:\"__typename\""
 	Title        string                 "json:\"title\""
 	Textbook     *GetBooks_Textbook     "json:\"-\""
 	ColoringBook *GetBooks_ColoringBook "json:\"-\""
@@ -88,17 +89,14 @@ type GetBooks_Books struct {
 
 func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
 	type Alias GetBooks_Books
-	var r struct {
-		Typename string `json:"__typename"`
-		Alias
-	}
+	var r Alias
 
 	err := json.Unmarshal(data, &r)
 	if err != nil {
 		return err
 	}
 
-	*t = GetBooks_Books(r.Alias)
+	*t = GetBooks_Books(r)
 
 	switch r.Typename {
 	case "ColoringBook":
@@ -160,6 +158,30 @@ func (c *Client) GetRoom(ctx context.Context, name string) (*GetRoom, transport.
 	return &data, res, nil
 }
 
+const GetRoomFragmentDocument = `query GetRoomFragment ($name: String!) {
+	room(name: $name) {
+		... RoomFragment
+	}
+}
+fragment RoomFragment on Chatroom {
+	name
+}
+`
+
+func (c *Client) GetRoomFragment(ctx context.Context, name string) (*GetRoomFragment, transport.OperationResponse, error) {
+	vars := map[string]interface{}{
+		"name": name,
+	}
+
+	var data GetRoomFragment
+	res, err := c.Client.Query(ctx, "GetRoomFragment", GetRoomFragmentDocument, vars, &data)
+	if err != nil {
+		return nil, transport.OperationResponse{}, err
+	}
+
+	return &data, res, nil
+}
+
 const GetRoomCustomDocument = `query GetRoomCustom ($name: String!) {
 	room(name: $name) {
 		name
@@ -183,13 +205,12 @@ func (c *Client) GetRoomCustom(ctx context.Context, name string) (*somelib.Custo
 
 const GetMediasDocument = `query GetMedias {
 	medias {
+		__typename
 		... on Image {
 			size
-			__typename
 		}
 		... on Video {
 			duration
-			__typename
 		}
 	}
 }
@@ -209,14 +230,13 @@ func (c *Client) GetMedias(ctx context.Context) (*GetMedias, transport.Operation
 
 const GetBooksDocument = `query GetBooks {
 	books {
+		__typename
 		title
 		... on Textbook {
 			courses
-			__typename
 		}
 		... on ColoringBook {
 			colors
-			__typename
 		}
 	}
 }

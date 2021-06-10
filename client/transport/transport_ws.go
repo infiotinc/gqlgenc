@@ -227,7 +227,7 @@ func (t *Ws) run(inctx context.Context) {
 
 	ctx := inctx
 	for {
-		t.printLog(GQL_INTERNAL, "STATUS", t.status)
+		//t.printLog(GQL_INTERNAL, "STATUS", t.status)
 
 		select {
 		case <-inctx.Done():

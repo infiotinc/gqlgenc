@@ -4,6 +4,16 @@ query GetRoom($name: String!) {
     }
 }
 
+fragment RoomFragment on Chatroom {
+    name
+}
+
+query GetRoomFragment($name: String!) {
+    room(name: $name) {
+        ... RoomFragment
+    }
+}
+
 query GetRoomCustom($name: String!) {
     room(name: $name) {
         name

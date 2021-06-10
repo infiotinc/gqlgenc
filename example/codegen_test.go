@@ -75,6 +75,26 @@ func TestQueryCustomType(t *testing.T) {
 	assert.Equal(t, "Room: test", room.String())
 }
 
+func TestQueryFragment(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.GetRoomFragment(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "test", res.Room.Name)
+}
+
 func TestQueryUnion(t *testing.T) {
 	t.Parallel()
 

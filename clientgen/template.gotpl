@@ -24,17 +24,14 @@
     {{- if .UnmarshalTypes }}
     func (t *{{ .Name }}) UnmarshalJSON(data []byte) error {
         type Alias {{ .Name }}
-        var r struct {
-            Typename string `json:"__typename"`
-            Alias
-        }
+        var r Alias
 
         err := json.Unmarshal(data, &r)
         if err != nil {
             return err
         }
 
-        *t = {{ .Name }}(r.Alias)
+        *t = {{ .Name }}(r)
 
         switch r.Typename {
         {{- range $typename, $target := .UnmarshalTypes }}

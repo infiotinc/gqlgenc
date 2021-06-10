@@ -35,24 +35,22 @@ type Type struct {
 	Name           string
 	Type           types.Type
 	UnmarshalTypes map[string]TypeTarget
+	RefType        *types.Named
 }
 
-func (s *Source) Fragments() ([]*Type, error) {
-	genTypes := make([]*Type, 0, len(s.queryDocument.Fragments))
+func (s *Source) Fragments() error {
 	for _, fragment := range s.queryDocument.Fragments {
 		name := templates.ToGo(fragment.Name)
 
 		_ = s.sourceGenerator.namedType(name, func() types.Type {
-			responseFields, rfGenTypes := s.sourceGenerator.NewResponseFields(name, fragment.SelectionSet)
-			genTypes = append(genTypes, rfGenTypes...)
+			responseFields := s.sourceGenerator.NewResponseFields(name, &fragment.SelectionSet)
 
-			typ, rfGenTypes := s.sourceGenerator.genStruct("", name, responseFields)
-			genTypes = append(genTypes, rfGenTypes...)
+			typ := s.sourceGenerator.genStruct("", name, responseFields)
 			return typ
 		})
 	}
 
-	return genTypes, nil
+	return nil
 }
 
 type Operation struct {
@@ -122,9 +120,8 @@ type OperationResponse struct {
 	Type      types.Type
 }
 
-func (s *Source) OperationResponses() ([]*OperationResponse, []*Type, error) {
+func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 	operationResponses := make([]*OperationResponse, 0, len(s.queryDocument.Operations))
-	genTypes := make([]*Type, 0)
 	for _, operationResponse := range s.queryDocument.Operations {
 		name := getResponseStructName(operationResponse, s.generateConfig)
 
@@ -134,11 +131,9 @@ func (s *Source) OperationResponses() ([]*OperationResponse, []*Type, error) {
 		}
 
 		namedType := s.sourceGenerator.namedType(name, func() types.Type {
-			responseFields, rfGenTypes := s.sourceGenerator.NewResponseFields(name, operationResponse.SelectionSet)
-			genTypes = append(genTypes, rfGenTypes...)
+			responseFields := s.sourceGenerator.NewResponseFields(name, &operationResponse.SelectionSet)
 
-			typ, rfGenTypes := s.sourceGenerator.genStruct("", name, responseFields)
-			genTypes = append(genTypes, rfGenTypes...)
+			typ := s.sourceGenerator.genStruct("", name, responseFields)
 			return typ
 		})
 		opres.Type = namedType
@@ -146,7 +141,7 @@ func (s *Source) OperationResponses() ([]*OperationResponse, []*Type, error) {
 		operationResponses = append(operationResponses, opres)
 	}
 
-	return operationResponses, genTypes, nil
+	return operationResponses, nil
 }
 
 func getResponseStructName(operation *ast.OperationDefinition, generateConfig *config.GenerateConfig) string {

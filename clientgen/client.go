@@ -53,22 +53,19 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 	sourceGenerator := NewSourceGenerator(cfg, p.Client)
 	source := NewSource(cfg.Schema, queryDocument, sourceGenerator, p.GenerateConfig)
 
-	types := make([]*Type, 0)
-
-	fragments, err := source.Fragments()
+	err = source.Fragments()
 	if err != nil {
 		return fmt.Errorf("generating fragment failed: %w", err)
 	}
-	types = append(types, fragments...)
 
-	operationResponses, operationResponsesTypes, err := source.OperationResponses()
+	operationResponses, err := source.OperationResponses()
 	if err != nil {
 		return fmt.Errorf("generating operation response failed: %w", err)
 	}
 
-	types = append(types, operationResponsesTypes...)
-
 	operations := source.Operations(queryDocuments, operationResponses)
+
+	types := sourceGenerator.GenTypes()
 
 	generateClient := p.GenerateConfig.ShouldGenerateClient()
 	if err := RenderTemplate(cfg, types, operations, operationResponses, generateClient, p.Client); err != nil {
