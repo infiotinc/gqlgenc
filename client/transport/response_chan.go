@@ -54,6 +54,8 @@ func (r *ChanResponse) CloseWithError(err error) {
 
 func (r *ChanResponse) CloseCh() {
 	r.m.Lock()
+	defer r.m.Unlock()
+
 	if r.closed {
 		return
 	}
@@ -61,7 +63,6 @@ func (r *ChanResponse) CloseCh() {
 	close(r.ch)
 	close(r.dc)
 	r.closed = true
-	r.m.Unlock()
 }
 
 func (r *ChanResponse) Done() <-chan struct{} {
@@ -70,9 +71,10 @@ func (r *ChanResponse) Done() <-chan struct{} {
 
 func (r *ChanResponse) Send(op OperationResponse) {
 	r.m.Lock()
+	defer r.m.Unlock()
+
 	select {
 	case r.ch <- op:
 	case <-r.Done():
 	}
-	r.m.Unlock()
 }
