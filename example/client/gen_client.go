@@ -14,6 +14,7 @@ import (
 type Client struct {
 	Client *client.Client
 }
+
 type RoomFragment struct {
 	Name string "json:\"name\""
 }
@@ -144,18 +145,20 @@ const GetRoomDocument = `query GetRoom ($name: String!) {
 }
 `
 
-func (c *Client) GetRoom(ctx context.Context, name string) (*GetRoom, transport.OperationResponse, error) {
-	vars := map[string]interface{}{
+func (c *Client) GetRoom(ctϰ context.Context, name string) (*GetRoom, transport.OperationResponse, error) {
+	vαrs := map[string]interface{}{
 		"name": name,
 	}
 
-	var data GetRoom
-	res, err := c.Client.Query(ctx, "GetRoom", GetRoomDocument, vars, &data)
-	if err != nil {
-		return nil, transport.OperationResponse{}, err
-	}
+	{
+		var data GetRoom
+		res, err := c.Client.Query(ctϰ, "GetRoom", GetRoomDocument, vαrs, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
 
-	return &data, res, nil
+		return &data, res, nil
+	}
 }
 
 const GetRoomFragmentDocument = `query GetRoomFragment ($name: String!) {
@@ -168,18 +171,20 @@ fragment RoomFragment on Chatroom {
 }
 `
 
-func (c *Client) GetRoomFragment(ctx context.Context, name string) (*GetRoomFragment, transport.OperationResponse, error) {
-	vars := map[string]interface{}{
+func (c *Client) GetRoomFragment(ctϰ context.Context, name string) (*GetRoomFragment, transport.OperationResponse, error) {
+	vαrs := map[string]interface{}{
 		"name": name,
 	}
 
-	var data GetRoomFragment
-	res, err := c.Client.Query(ctx, "GetRoomFragment", GetRoomFragmentDocument, vars, &data)
-	if err != nil {
-		return nil, transport.OperationResponse{}, err
-	}
+	{
+		var data GetRoomFragment
+		res, err := c.Client.Query(ctϰ, "GetRoomFragment", GetRoomFragmentDocument, vαrs, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
 
-	return &data, res, nil
+		return &data, res, nil
+	}
 }
 
 const GetRoomCustomDocument = `query GetRoomCustom ($name: String!) {
@@ -189,18 +194,20 @@ const GetRoomCustomDocument = `query GetRoomCustom ($name: String!) {
 }
 `
 
-func (c *Client) GetRoomCustom(ctx context.Context, name string) (*somelib.CustomRoom, transport.OperationResponse, error) {
-	vars := map[string]interface{}{
+func (c *Client) GetRoomCustom(ctϰ context.Context, name string) (*somelib.CustomRoom, transport.OperationResponse, error) {
+	vαrs := map[string]interface{}{
 		"name": name,
 	}
 
-	var data somelib.CustomRoom
-	res, err := c.Client.Query(ctx, "GetRoomCustom", GetRoomCustomDocument, vars, &data)
-	if err != nil {
-		return nil, transport.OperationResponse{}, err
-	}
+	{
+		var data somelib.CustomRoom
+		res, err := c.Client.Query(ctϰ, "GetRoomCustom", GetRoomCustomDocument, vαrs, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
 
-	return &data, res, nil
+		return &data, res, nil
+	}
 }
 
 const GetMediasDocument = `query GetMedias {
@@ -216,16 +223,18 @@ const GetMediasDocument = `query GetMedias {
 }
 `
 
-func (c *Client) GetMedias(ctx context.Context) (*GetMedias, transport.OperationResponse, error) {
-	vars := map[string]interface{}{}
+func (c *Client) GetMedias(ctϰ context.Context) (*GetMedias, transport.OperationResponse, error) {
+	vαrs := map[string]interface{}{}
 
-	var data GetMedias
-	res, err := c.Client.Query(ctx, "GetMedias", GetMediasDocument, vars, &data)
-	if err != nil {
-		return nil, transport.OperationResponse{}, err
+	{
+		var data GetMedias
+		res, err := c.Client.Query(ctϰ, "GetMedias", GetMediasDocument, vαrs, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
 	}
-
-	return &data, res, nil
 }
 
 const GetBooksDocument = `query GetBooks {
@@ -242,16 +251,18 @@ const GetBooksDocument = `query GetBooks {
 }
 `
 
-func (c *Client) GetBooks(ctx context.Context) (*GetBooks, transport.OperationResponse, error) {
-	vars := map[string]interface{}{}
+func (c *Client) GetBooks(ctϰ context.Context) (*GetBooks, transport.OperationResponse, error) {
+	vαrs := map[string]interface{}{}
 
-	var data GetBooks
-	res, err := c.Client.Query(ctx, "GetBooks", GetBooksDocument, vars, &data)
-	if err != nil {
-		return nil, transport.OperationResponse{}, err
+	{
+		var data GetBooks
+		res, err := c.Client.Query(ctϰ, "GetBooks", GetBooksDocument, vαrs, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
 	}
-
-	return &data, res, nil
 }
 
 const SubscribeMessageAddedDocument = `subscription SubscribeMessageAdded {
@@ -267,41 +278,43 @@ type MessageSubscribeMessageAdded struct {
 	Extensions transport.RawExtensions
 }
 
-func (c *Client) SubscribeMessageAdded(ctx context.Context) (<-chan MessageSubscribeMessageAdded, func()) {
-	vars := map[string]interface{}{}
+func (c *Client) SubscribeMessageAdded(ctϰ context.Context) (<-chan MessageSubscribeMessageAdded, func()) {
+	vαrs := map[string]interface{}{}
 
-	res := c.Client.Subscription(ctx, "SubscribeMessageAdded", SubscribeMessageAddedDocument, vars)
+	{
+		res := c.Client.Subscription(ctϰ, "SubscribeMessageAdded", SubscribeMessageAddedDocument, vαrs)
 
-	ch := make(chan MessageSubscribeMessageAdded)
+		ch := make(chan MessageSubscribeMessageAdded)
 
-	go func() {
-		for res.Next() {
-			opres := res.Get()
+		go func() {
+			for res.Next() {
+				opres := res.Get()
 
-			var msg MessageSubscribeMessageAdded
-			if len(opres.Errors) > 0 {
-				msg.Error = opres.Errors
+				var msg MessageSubscribeMessageAdded
+				if len(opres.Errors) > 0 {
+					msg.Error = opres.Errors
+				}
+
+				err := opres.UnmarshalData(&msg.Data)
+				if err != nil && msg.Error == nil {
+					msg.Error = err
+				}
+
+				msg.Extensions = opres.Extensions
+
+				ch <- msg
 			}
 
-			err := opres.UnmarshalData(&msg.Data)
-			if err != nil && msg.Error == nil {
-				msg.Error = err
+			if err := res.Err(); err != nil {
+				ch <- MessageSubscribeMessageAdded{
+					Error: err,
+				}
 			}
+			close(ch)
+		}()
 
-			msg.Extensions = opres.Extensions
-
-			ch <- msg
-		}
-
-		if err := res.Err(); err != nil {
-			ch <- MessageSubscribeMessageAdded{
-				Error: err,
-			}
-		}
-		close(ch)
-	}()
-
-	return ch, res.Close
+		return ch, res.Close
+	}
 }
 
 const CreatePostDocument = `mutation CreatePost ($input: PostCreateInput!) {
@@ -312,16 +325,18 @@ const CreatePostDocument = `mutation CreatePost ($input: PostCreateInput!) {
 }
 `
 
-func (c *Client) CreatePost(ctx context.Context, input PostCreateInput) (*CreatePost, transport.OperationResponse, error) {
-	vars := map[string]interface{}{
+func (c *Client) CreatePost(ctϰ context.Context, input PostCreateInput) (*CreatePost, transport.OperationResponse, error) {
+	vαrs := map[string]interface{}{
 		"input": input,
 	}
 
-	var data CreatePost
-	res, err := c.Client.Mutation(ctx, "CreatePost", CreatePostDocument, vars, &data)
-	if err != nil {
-		return nil, transport.OperationResponse{}, err
-	}
+	{
+		var data CreatePost
+		res, err := c.Client.Mutation(ctϰ, "CreatePost", CreatePostDocument, vαrs, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
 
-	return &data, res, nil
+		return &data, res, nil
+	}
 }

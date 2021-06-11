@@ -18,6 +18,8 @@
 	}
 {{- end }}
 
+{{/* Greek character used to prevent name conflicts */}}
+
 {{- range $name, $element := .Types }}
 	type {{ .Name  }} {{ .Type | ref }}
 
@@ -62,61 +64,65 @@
                 Extensions transport.RawExtensions
             }
 
-            func (c *Client) {{ $op.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $op.Name|go }}, func()) {
-                vars := map[string]interface{}{
+            func (c *Client) {{ $op.Name|go }} (ctϰ context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $op.Name|go }}, func()) {
+                vαrs := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
                 }
 
-                res := c.Client.Subscription(ctx, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vars)
+                { {{/* New block to prevent var names conflicts */}}
+                    res := c.Client.Subscription(ctϰ, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vαrs)
 
-                ch := make(chan Message{{ $op.Name|go }})
+                    ch := make(chan Message{{ $op.Name|go }})
 
-                go func() {
-                    for res.Next() {
-                        opres := res.Get()
+                    go func() {
+                        for res.Next() {
+                            opres := res.Get()
 
-                        var msg Message{{ $op.Name|go }}
-                        if len(opres.Errors) > 0 {
-                            msg.Error = opres.Errors
+                            var msg Message{{ $op.Name|go }}
+                            if len(opres.Errors) > 0 {
+                                msg.Error = opres.Errors
+                            }
+
+                            err := opres.UnmarshalData(&msg.Data)
+                            if err != nil && msg.Error == nil {
+                                msg.Error = err
+                            }
+
+                            msg.Extensions = opres.Extensions
+
+                            ch <- msg
                         }
 
-                        err := opres.UnmarshalData(&msg.Data)
-                        if err != nil && msg.Error == nil {
-                            msg.Error = err
+                        if err := res.Err(); err != nil {
+                            ch <- Message{{ $op.Name|go }} {
+                                Error: err,
+                            }
                         }
+                        close(ch)
+                    }()
 
-                        msg.Extensions = opres.Extensions
-
-                        ch <- msg
-                    }
-
-                    if err := res.Err(); err != nil {
-                        ch <- Message{{ $op.Name|go }} {
-                            Error: err,
-                        }
-                    }
-                    close(ch)
-                }()
-
-                return ch, res.Close
+                    return ch, res.Close
+                }
             }
         {{- else}}
-            func (c *Client) {{ $op.Name|go }} (ctx context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $op.ResponseType | ref }}, transport.OperationResponse, error) {
-                vars := map[string]interface{}{
+            func (c *Client) {{ $op.Name|go }} (ctϰ context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $op.ResponseType | ref }}, transport.OperationResponse, error) {
+                vαrs := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
                 }
 
-                var data {{ $op.ResponseType | ref }}
-                res, err := c.Client.{{ $op.OperationType|ucFirst }}(ctx, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vars, &data)
-                if err != nil {
-                    return nil, transport.OperationResponse{}, err
-                }
+                { {{/* New block to prevent var names conflicts */}}
+                    var data {{ $op.ResponseType | ref }}
+                    res, err := c.Client.{{ $op.OperationType|ucFirst }}(ctϰ, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vαrs, &data)
+                    if err != nil {
+                        return nil, transport.OperationResponse{}, err
+                    }
 
-                return &data, res, nil
+                    return &data, res, nil
+                }
             }
         {{- end}}
 	{{- end}}
