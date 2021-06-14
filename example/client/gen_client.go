@@ -22,10 +22,16 @@ type GetRoom_Room struct {
 	Name string "json:\"name\""
 }
 type GetRoom struct {
-	Room GetRoom_Room "json:\"room\""
+	Room *GetRoom_Room "json:\"room\""
+}
+type GetRoomNonNull_RoomNonNull struct {
+	Name string "json:\"name\""
+}
+type GetRoomNonNull struct {
+	RoomNonNull GetRoomNonNull_RoomNonNull "json:\"roomNonNull\""
 }
 type GetRoomFragment struct {
-	Room RoomFragment "json:\"room\""
+	Room *RoomFragment "json:\"room\""
 }
 type GetMedias_Image struct {
 	Size int64 "json:\"size\""
@@ -153,6 +159,29 @@ func (c *Client) GetRoom(ctϰ context.Context, name string) (*GetRoom, transport
 	{
 		var data GetRoom
 		res, err := c.Client.Query(ctϰ, "GetRoom", GetRoomDocument, vαrs, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
+	}
+}
+
+const GetRoomNonNullDocument = `query GetRoomNonNull ($name: String!) {
+	roomNonNull(name: $name) {
+		name
+	}
+}
+`
+
+func (c *Client) GetRoomNonNull(ctϰ context.Context, name string) (*GetRoomNonNull, transport.OperationResponse, error) {
+	vαrs := map[string]interface{}{
+		"name": name,
+	}
+
+	{
+		var data GetRoomNonNull
+		res, err := c.Client.Query(ctϰ, "GetRoomNonNull", GetRoomNonNullDocument, vαrs, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}

@@ -4,6 +4,12 @@ query GetRoom($name: String!) {
     }
 }
 
+query GetRoomNonNull($name: String!) {
+    roomNonNull(name: $name) {
+        name
+    }
+}
+
 fragment RoomFragment on Chatroom {
     name
 }

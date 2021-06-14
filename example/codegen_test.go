@@ -4,6 +4,7 @@ import (
 	"context"
 	"example/client"
 	"github.com/stretchr/testify/assert"
+	"reflect"
 	"testing"
 )
 
@@ -35,6 +36,10 @@ func TestSubscription(t *testing.T) {
 	assert.Len(t, ids, 3)
 }
 
+func isPointer(v interface{}) bool {
+	return reflect.ValueOf(v).Kind() == reflect.Ptr
+}
+
 func TestQuery(t *testing.T) {
 	t.Parallel()
 
@@ -53,6 +58,28 @@ func TestQuery(t *testing.T) {
 	}
 
 	assert.Equal(t, "test", room.Room.Name)
+	assert.True(t, isPointer(room.Room), "room must be a pointer")
+}
+
+func TestQueryNonNull(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	room, _, err := gql.GetRoomNonNull(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "test", room.RoomNonNull.Name)
+	assert.False(t, isPointer(room.RoomNonNull), "room must not be a pointer")
 }
 
 func TestQueryCustomType(t *testing.T) {

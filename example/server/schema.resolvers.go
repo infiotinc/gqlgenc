@@ -30,6 +30,10 @@ func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom,
 	}, nil
 }
 
+func (r *queryResolver) RoomNonNull(ctx context.Context, name string) (*model.Chatroom, error) {
+	return r.Room(ctx, name)
+}
+
 func (r *queryResolver) Medias(ctx context.Context) ([]model.Media, error) {
 	return []model.Media{
 		&model.Image{

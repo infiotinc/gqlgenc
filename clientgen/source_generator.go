@@ -170,15 +170,17 @@ func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields Re
 		tags = append(tags, strings.Join(field.Tags, " "))
 	}
 
+	typ := types.NewStruct(vars, tags)
+
 	refType := types.NewNamed(
 		types.NewTypeName(0, r.client.Pkg(), fullName, nil),
-		types.NewInterfaceType([]*types.Func{}, []types.Type{}),
+		nil,
 		nil,
 	)
 
 	r.RegisterGenType(fullName, &Type{
 		Name:           fullName,
-		Type:           types.NewStruct(vars, tags),
+		Type:           typ,
 		RefType:        refType,
 		UnmarshalTypes: unmarshalTypes,
 	})

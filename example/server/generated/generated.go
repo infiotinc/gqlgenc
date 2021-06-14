@@ -73,9 +73,10 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Books  func(childComplexity int) int
-		Medias func(childComplexity int) int
-		Room   func(childComplexity int, name string) int
+		Books       func(childComplexity int) int
+		Medias      func(childComplexity int) int
+		Room        func(childComplexity int, name string) int
+		RoomNonNull func(childComplexity int, name string) int
 	}
 
 	Subscription struct {
@@ -97,6 +98,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Room(ctx context.Context, name string) (*model.Chatroom, error)
+	RoomNonNull(ctx context.Context, name string) (*model.Chatroom, error)
 	Medias(ctx context.Context) ([]model.Media, error)
 	Books(ctx context.Context) ([]model.Book, error)
 }
@@ -219,6 +221,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Room(childComplexity, args["name"].(string)), true
+
+	case "Query.roomNonNull":
+		if e.complexity.Query.RoomNonNull == nil {
+			break
+		}
+
+		args, err := ec.field_Query_roomNonNull_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.RoomNonNull(childComplexity, args["name"].(string)), true
 
 	case "Subscription.messageAdded":
 		if e.complexity.Subscription.MessageAdded == nil {
@@ -374,6 +388,7 @@ type Message {
 
 type Query {
     room(name:String!): Chatroom
+    roomNonNull(name:String!): Chatroom!
     medias: [Media!]!
     books: [Book!]!
 }
@@ -413,6 +428,21 @@ func (ec *executionContext) field_Mutation_post_args(ctx context.Context, rawArg
 }
 
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_roomNonNull_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -889,6 +919,48 @@ func (ec *executionContext) _Query_room(ctx context.Context, field graphql.Colle
 	res := resTmp.(*model.Chatroom)
 	fc.Result = res
 	return ec.marshalOChatroom2ᚖexampleᚋserverᚋmodelᚐChatroom(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_roomNonNull(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_roomNonNull_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().RoomNonNull(rctx, args["name"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Chatroom)
+	fc.Result = res
+	return ec.marshalNChatroom2ᚖexampleᚋserverᚋmodelᚐChatroom(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_medias(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2540,6 +2612,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				res = ec._Query_room(ctx, field)
 				return res
 			})
+		case "roomNonNull":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_roomNonNull(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "medias":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -2967,6 +3053,20 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNChatroom2exampleᚋserverᚋmodelᚐChatroom(ctx context.Context, sel ast.SelectionSet, v model.Chatroom) graphql.Marshaler {
+	return ec._Chatroom(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNChatroom2ᚖexampleᚋserverᚋmodelᚐChatroom(ctx context.Context, sel ast.SelectionSet, v *model.Chatroom) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Chatroom(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {

@@ -38,6 +38,7 @@ type Message {
 
 type Query {
     room(name:String!): Chatroom
+    roomNonNull(name:String!): Chatroom!
     medias: [Media!]!
     books: [Book!]!
 }
