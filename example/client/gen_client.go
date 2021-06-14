@@ -46,8 +46,8 @@ type GetMedias_Medias struct {
 }
 
 func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
-	type Alias GetMedias_Medias
-	var r Alias
+	type Aliαs GetMedias_Medias
+	var r Aliαs
 
 	err := json.Unmarshal(data, &r)
 	if err != nil {
@@ -95,8 +95,8 @@ type GetBooks_Books struct {
 }
 
 func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
-	type Alias GetBooks_Books
-	var r Alias
+	type Aliαs GetBooks_Books
+	var r Aliαs
 
 	err := json.Unmarshal(data, &r)
 	if err != nil {
@@ -151,14 +151,14 @@ const GetRoomDocument = `query GetRoom ($name: String!) {
 }
 `
 
-func (c *Client) GetRoom(ctϰ context.Context, name string) (*GetRoom, transport.OperationResponse, error) {
+func (ϲ *Client) GetRoom(ctϰ context.Context, name string) (*GetRoom, transport.OperationResponse, error) {
 	vαrs := map[string]interface{}{
 		"name": name,
 	}
 
 	{
 		var data GetRoom
-		res, err := c.Client.Query(ctϰ, "GetRoom", GetRoomDocument, vαrs, &data)
+		res, err := ϲ.Client.Query(ctϰ, "GetRoom", GetRoomDocument, vαrs, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -174,14 +174,14 @@ const GetRoomNonNullDocument = `query GetRoomNonNull ($name: String!) {
 }
 `
 
-func (c *Client) GetRoomNonNull(ctϰ context.Context, name string) (*GetRoomNonNull, transport.OperationResponse, error) {
+func (ϲ *Client) GetRoomNonNull(ctϰ context.Context, name string) (*GetRoomNonNull, transport.OperationResponse, error) {
 	vαrs := map[string]interface{}{
 		"name": name,
 	}
 
 	{
 		var data GetRoomNonNull
-		res, err := c.Client.Query(ctϰ, "GetRoomNonNull", GetRoomNonNullDocument, vαrs, &data)
+		res, err := ϲ.Client.Query(ctϰ, "GetRoomNonNull", GetRoomNonNullDocument, vαrs, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -200,14 +200,14 @@ fragment RoomFragment on Chatroom {
 }
 `
 
-func (c *Client) GetRoomFragment(ctϰ context.Context, name string) (*GetRoomFragment, transport.OperationResponse, error) {
+func (ϲ *Client) GetRoomFragment(ctϰ context.Context, name string) (*GetRoomFragment, transport.OperationResponse, error) {
 	vαrs := map[string]interface{}{
 		"name": name,
 	}
 
 	{
 		var data GetRoomFragment
-		res, err := c.Client.Query(ctϰ, "GetRoomFragment", GetRoomFragmentDocument, vαrs, &data)
+		res, err := ϲ.Client.Query(ctϰ, "GetRoomFragment", GetRoomFragmentDocument, vαrs, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -223,14 +223,14 @@ const GetRoomCustomDocument = `query GetRoomCustom ($name: String!) {
 }
 `
 
-func (c *Client) GetRoomCustom(ctϰ context.Context, name string) (*somelib.CustomRoom, transport.OperationResponse, error) {
+func (ϲ *Client) GetRoomCustom(ctϰ context.Context, name string) (*somelib.CustomRoom, transport.OperationResponse, error) {
 	vαrs := map[string]interface{}{
 		"name": name,
 	}
 
 	{
 		var data somelib.CustomRoom
-		res, err := c.Client.Query(ctϰ, "GetRoomCustom", GetRoomCustomDocument, vαrs, &data)
+		res, err := ϲ.Client.Query(ctϰ, "GetRoomCustom", GetRoomCustomDocument, vαrs, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -252,12 +252,12 @@ const GetMediasDocument = `query GetMedias {
 }
 `
 
-func (c *Client) GetMedias(ctϰ context.Context) (*GetMedias, transport.OperationResponse, error) {
+func (ϲ *Client) GetMedias(ctϰ context.Context) (*GetMedias, transport.OperationResponse, error) {
 	vαrs := map[string]interface{}{}
 
 	{
 		var data GetMedias
-		res, err := c.Client.Query(ctϰ, "GetMedias", GetMediasDocument, vαrs, &data)
+		res, err := ϲ.Client.Query(ctϰ, "GetMedias", GetMediasDocument, vαrs, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -280,12 +280,12 @@ const GetBooksDocument = `query GetBooks {
 }
 `
 
-func (c *Client) GetBooks(ctϰ context.Context) (*GetBooks, transport.OperationResponse, error) {
+func (ϲ *Client) GetBooks(ctϰ context.Context) (*GetBooks, transport.OperationResponse, error) {
 	vαrs := map[string]interface{}{}
 
 	{
 		var data GetBooks
-		res, err := c.Client.Query(ctϰ, "GetBooks", GetBooksDocument, vαrs, &data)
+		res, err := ϲ.Client.Query(ctϰ, "GetBooks", GetBooksDocument, vαrs, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -307,11 +307,11 @@ type MessageSubscribeMessageAdded struct {
 	Extensions transport.RawExtensions
 }
 
-func (c *Client) SubscribeMessageAdded(ctϰ context.Context) (<-chan MessageSubscribeMessageAdded, func()) {
+func (ϲ *Client) SubscribeMessageAdded(ctϰ context.Context) (<-chan MessageSubscribeMessageAdded, func()) {
 	vαrs := map[string]interface{}{}
 
 	{
-		res := c.Client.Subscription(ctϰ, "SubscribeMessageAdded", SubscribeMessageAddedDocument, vαrs)
+		res := ϲ.Client.Subscription(ctϰ, "SubscribeMessageAdded", SubscribeMessageAddedDocument, vαrs)
 
 		ch := make(chan MessageSubscribeMessageAdded)
 
@@ -354,14 +354,14 @@ const CreatePostDocument = `mutation CreatePost ($input: PostCreateInput!) {
 }
 `
 
-func (c *Client) CreatePost(ctϰ context.Context, input PostCreateInput) (*CreatePost, transport.OperationResponse, error) {
+func (ϲ *Client) CreatePost(ctϰ context.Context, input PostCreateInput) (*CreatePost, transport.OperationResponse, error) {
 	vαrs := map[string]interface{}{
 		"input": input,
 	}
 
 	{
 		var data CreatePost
-		res, err := c.Client.Mutation(ctϰ, "CreatePost", CreatePostDocument, vαrs, &data)
+		res, err := ϲ.Client.Mutation(ctϰ, "CreatePost", CreatePostDocument, vαrs, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}

@@ -25,8 +25,8 @@
 
     {{- if .UnmarshalTypes }}
     func (t *{{ .Name }}) UnmarshalJSON(data []byte) error {
-        type Alias {{ .Name }}
-        var r Alias
+        type Aliαs {{ .Name }}
+        var r Aliαs
 
         err := json.Unmarshal(data, &r)
         if err != nil {
@@ -64,7 +64,7 @@
                 Extensions transport.RawExtensions
             }
 
-            func (c *Client) {{ $op.Name|go }} (ctϰ context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $op.Name|go }}, func()) {
+            func (ϲ *Client) {{ $op.Name|go }} (ctϰ context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $op.Name|go }}, func()) {
                 vαrs := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
@@ -72,7 +72,7 @@
                 }
 
                 { {{/* New block to prevent var names conflicts */}}
-                    res := c.Client.Subscription(ctϰ, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vαrs)
+                    res := ϲ.Client.Subscription(ctϰ, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vαrs)
 
                     ch := make(chan Message{{ $op.Name|go }})
 
@@ -107,7 +107,7 @@
                 }
             }
         {{- else}}
-            func (c *Client) {{ $op.Name|go }} (ctϰ context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $op.ResponseType | ref }}, transport.OperationResponse, error) {
+            func (ϲ *Client) {{ $op.Name|go }} (ctϰ context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $op.ResponseType | ref }}, transport.OperationResponse, error) {
                 vαrs := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
@@ -116,7 +116,7 @@
 
                 { {{/* New block to prevent var names conflicts */}}
                     var data {{ $op.ResponseType | ref }}
-                    res, err := c.Client.{{ $op.OperationType|ucFirst }}(ctϰ, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vαrs, &data)
+                    res, err := ϲ.Client.{{ $op.OperationType|ucFirst }}(ctϰ, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vαrs, &data)
                     if err != nil {
                         return nil, transport.OperationResponse{}, err
                     }
