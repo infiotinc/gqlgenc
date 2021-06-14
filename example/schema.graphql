@@ -1,5 +1,29 @@
 scalar Time
 
+union Media = Image | Video
+
+type Image {
+  size: Int!
+}
+
+type Video {
+  duration: Int!
+}
+
+interface Book {
+  title: String!
+}
+
+type Textbook implements Book {
+  title: String!
+  courses: [String!]!
+}
+
+type ColoringBook implements Book {
+  title: String!
+  colors: [String!]!
+}
+
 type Chatroom {
     name: String!
     messages: [Message!]!
@@ -14,10 +38,17 @@ type Message {
 
 type Query {
     room(name:String!): Chatroom
+    roomNonNull(name:String!): Chatroom!
+    medias: [Media!]!
+    books: [Book!]!
+}
+
+input PostCreateInput {
+    text: String!
 }
 
 type Mutation {
-    post(text: String!, username: String!, roomName: String!): Message!
+    post(input: PostCreateInput!): Message!
 }
 
 type Subscription {

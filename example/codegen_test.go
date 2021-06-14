@@ -4,10 +4,13 @@ import (
 	"context"
 	"example/client"
 	"github.com/stretchr/testify/assert"
+	"reflect"
 	"testing"
 )
 
 func TestSubscription(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cli, td, _ := splitcli(ctx)
@@ -33,7 +36,13 @@ func TestSubscription(t *testing.T) {
 	assert.Len(t, ids, 3)
 }
 
+func isPointer(v interface{}) bool {
+	return reflect.ValueOf(v).Kind() == reflect.Ptr
+}
+
 func TestQuery(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cli, td, _ := splitcli(ctx)
@@ -49,9 +58,33 @@ func TestQuery(t *testing.T) {
 	}
 
 	assert.Equal(t, "test", room.Room.Name)
+	assert.True(t, isPointer(room.Room), "room must be a pointer")
+}
+
+func TestQueryNonNull(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	room, _, err := gql.GetRoomNonNull(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "test", room.RoomNonNull.Name)
+	assert.False(t, isPointer(room.RoomNonNull), "room must not be a pointer")
 }
 
 func TestQueryCustomType(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	cli, td, _ := splitcli(ctx)
@@ -67,4 +100,95 @@ func TestQueryCustomType(t *testing.T) {
 	}
 
 	assert.Equal(t, "Room: test", room.String())
+}
+
+func TestQueryFragment(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.GetRoomFragment(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "test", res.Room.Name)
+}
+
+func TestQueryUnion(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.GetMedias(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Len(t, res.Medias, 2)
+
+	assert.Equal(t, int64(100), res.Medias[0].Image.Size)
+	assert.Equal(t, int64(200), res.Medias[1].Video.Duration)
+}
+
+func TestQueryInterface(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.GetBooks(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Len(t, res.Books, 2)
+
+	assert.Equal(t, "Some textbook", res.Books[0].Title)
+	assert.Equal(t, []string{"course 1", "course 2"}, res.Books[0].Textbook.Courses)
+
+	assert.Equal(t, "Some Coloring Book", res.Books[1].Title)
+	assert.Equal(t, []string{"red", "blue"}, res.Books[1].ColoringBook.Colors)
+}
+
+func TestMutationInput(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td, _ := splitcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.CreatePost(ctx, client.PostCreateInput{
+		Text: "some text",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "some text", res.Post.Text)
 }

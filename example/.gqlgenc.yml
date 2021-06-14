@@ -1,6 +1,6 @@
 model:
-  filename: ./client/model/gen_models.go
-  package: model
+  filename: ./client/gen_models.go
+  package: client
 client:
   filename: ./client/gen_client.go
   package: client

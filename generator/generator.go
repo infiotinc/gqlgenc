@@ -5,11 +5,11 @@ package generator
 import (
 	"context"
 	"fmt"
+	"github.com/99designs/gqlgen/plugin/modelgen"
 	"github.com/infiotinc/gqlgenc/config"
 
 	"github.com/99designs/gqlgen/api"
 	"github.com/99designs/gqlgen/plugin"
-	"github.com/99designs/gqlgen/plugin/modelgen"
 )
 
 func Generate(ctx context.Context, cfg *config.Config, option ...api.Option) error {

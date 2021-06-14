@@ -13,8 +13,10 @@ import (
 	"strconv"
 )
 
-func (r *mutationResolver) Post(ctx context.Context, text string, username string, roomName string) (*model.Message, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) Post(ctx context.Context, input model.PostCreateInput) (*model.Message, error) {
+	return &model.Message{
+		Text: input.Text,
+	}, nil
 }
 
 func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom, error) {
@@ -25,6 +27,34 @@ func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom,
 	return &model.Chatroom{
 		Name:     name,
 		Messages: nil,
+	}, nil
+}
+
+func (r *queryResolver) RoomNonNull(ctx context.Context, name string) (*model.Chatroom, error) {
+	return r.Room(ctx, name)
+}
+
+func (r *queryResolver) Medias(ctx context.Context) ([]model.Media, error) {
+	return []model.Media{
+		&model.Image{
+			Size: 100,
+		},
+		&model.Video{
+			Duration: 200,
+		},
+	}, nil
+}
+
+func (r *queryResolver) Books(ctx context.Context) ([]model.Book, error) {
+	return []model.Book{
+		&model.Textbook{
+			Title:   "Some textbook",
+			Courses: []string{"course 1", "course 2"},
+		},
+		&model.ColoringBook{
+			Title:  "Some Coloring Book",
+			Colors: []string{"red", "blue"},
+		},
 	}, nil
 }
 

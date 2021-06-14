@@ -52,22 +52,8 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 	// 3. Generate code from template and document source
 	sourceGenerator := NewSourceGenerator(cfg, p.Client)
 	source := NewSource(cfg.Schema, queryDocument, sourceGenerator, p.GenerateConfig)
-	query, err := source.Query()
-	if err != nil {
-		return fmt.Errorf("generating query object: %w", err)
-	}
 
-	mutation, err := source.Mutation()
-	if err != nil {
-		return fmt.Errorf("generating mutation object: %w", err)
-	}
-
-	subscription, err := source.Subscription()
-	if err != nil {
-		return fmt.Errorf("generating subscription object: %w", err)
-	}
-
-	fragments, err := source.Fragments()
+	err = source.Fragments()
 	if err != nil {
 		return fmt.Errorf("generating fragment failed: %w", err)
 	}
@@ -79,8 +65,10 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 
 	operations := source.Operations(queryDocuments, operationResponses)
 
+	types := sourceGenerator.GenTypes()
+
 	generateClient := p.GenerateConfig.ShouldGenerateClient()
-	if err := RenderTemplate(cfg, query, mutation, subscription, fragments, operations, operationResponses, generateClient, p.Client); err != nil {
+	if err := RenderTemplate(cfg, types, operations, operationResponses, generateClient, p.Client); err != nil {
 		return fmt.Errorf("template failed: %w", err)
 	}
 

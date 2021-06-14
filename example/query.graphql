@@ -4,14 +4,60 @@ query GetRoom($name: String!) {
     }
 }
 
+query GetRoomNonNull($name: String!) {
+    roomNonNull(name: $name) {
+        name
+    }
+}
+
+fragment RoomFragment on Chatroom {
+    name
+}
+
+query GetRoomFragment($name: String!) {
+    room(name: $name) {
+        ... RoomFragment
+    }
+}
+
 query GetRoomCustom($name: String!) {
     room(name: $name) {
         name
     }
 }
 
+query GetMedias {
+  medias {
+    ... on Image {
+      size
+    }
+    ... on Video {
+      duration
+    }
+  }
+}
+
+query GetBooks {
+  books {
+    title
+    ... on Textbook {
+      courses
+    }
+    ... on ColoringBook {
+      colors
+    }
+  }
+}
+
 subscription SubscribeMessageAdded {
     messageAdded(roomName: "test") {
         id
+    }
+}
+
+mutation CreatePost($input: PostCreateInput!) {
+    post(input: $input) {
+        id
+        text
     }
 }

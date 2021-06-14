@@ -2,7 +2,7 @@ test:
 	go test -v -count=1 ./...
 
 example-fullgen:
-	rm example/client/model/gen_models.go || true
+	rm example/client/gen_models.go || true
 	rm example/client/gen_client.go || true
 	rm example/server/generated/generated.go || true
 	rm example/server/model/models_gen.go || true

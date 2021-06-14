@@ -2,12 +2,11 @@ package clientgen
 
 import (
 	"fmt"
-	"go/types"
-	"strings"
-
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/vektah/gqlparser/v2/ast"
+	"go/types"
+	"strings"
 )
 
 type Argument struct {
@@ -26,29 +25,6 @@ type ResponseField struct {
 
 type ResponseFieldList []*ResponseField
 
-func (rs ResponseFieldList) StructType() *types.Struct {
-	vars := make([]*types.Var, 0)
-	structTags := make([]string, 0)
-	for _, field := range rs {
-		//  クエリーのフィールドの子階層がFragmentの場合、このフィールドにそのFragmentの型を追加する
-		if field.IsFragmentSpread {
-			typ, ok := field.ResponseFields.StructType().Underlying().(*types.Struct)
-			if !ok {
-				continue
-			}
-			for j := 0; j < typ.NumFields(); j++ {
-				vars = append(vars, typ.Field(j))
-				structTags = append(structTags, typ.Tag(j))
-			}
-		} else {
-			vars = append(vars, types.NewVar(0, nil, templates.ToGo(field.Name), field.Type))
-			structTags = append(structTags, strings.Join(field.Tags, " "))
-		}
-	}
-
-	return types.NewStruct(vars, structTags)
-}
-
 func (rs ResponseFieldList) IsFragment() bool {
 	if len(rs) != 1 {
 		return false
@@ -65,10 +41,47 @@ func (rs ResponseFieldList) IsStructType() bool {
 	return len(rs) > 0 && !rs.IsFragment()
 }
 
+type genType struct {
+	name string
+	typ  *Type
+}
+
 type SourceGenerator struct {
 	cfg    *config.Config
 	binder *config.Binder
 	client config.PackageConfig
+
+	genTypes []genType
+}
+
+func (r *SourceGenerator) RegisterGenType(name string, typ *Type) {
+	if gt := r.GetGenType(name); gt != nil {
+		panic(name + ": gen type already defined")
+	}
+
+	r.genTypes = append(r.genTypes, genType{
+		name: name,
+		typ:  typ,
+	})
+}
+
+func (r *SourceGenerator) GetGenType(name string) *Type {
+	for _, gt := range r.genTypes {
+		if gt.name == name {
+			return gt.typ
+		}
+	}
+
+	return nil
+}
+
+func (r *SourceGenerator) GenTypes() []*Type {
+	typs := make([]*Type, 0)
+	for _, gt := range r.genTypes {
+		typs = append(typs, gt.typ)
+	}
+
+	return typs
 }
 
 func NewSourceGenerator(cfg *config.Config, client config.PackageConfig) *SourceGenerator {
@@ -79,79 +92,117 @@ func NewSourceGenerator(cfg *config.Config, client config.PackageConfig) *Source
 	}
 }
 
-func (r *SourceGenerator) NewResponseFields(selectionSet ast.SelectionSet) ResponseFieldList {
-	responseFields := make(ResponseFieldList, 0, len(selectionSet))
-	for _, selection := range selectionSet {
-		responseFields = append(responseFields, r.NewResponseField(selection))
+func (r *SourceGenerator) NewResponseFields(prefix string, selectionSet *ast.SelectionSet) ResponseFieldList {
+L:
+	for _, field := range *selectionSet {
+		switch field.(type) {
+		case *ast.InlineFragment:
+			*selectionSet = append(ast.SelectionSet{&ast.Field{
+				Name:  "__typename",
+				Alias: "__typename",
+				Definition: &ast.FieldDefinition{
+					Name: "Typename",
+					Type: ast.NonNullNamedType("String", nil),
+					Arguments: ast.ArgumentDefinitionList{
+						{Name: "name", Type: ast.NonNullNamedType("String", nil)},
+					},
+				},
+			}}, *selectionSet...)
+			break L
+		}
+	}
+
+	responseFields := make(ResponseFieldList, 0, len(*selectionSet))
+	for _, selection := range *selectionSet {
+		rf := r.NewResponseField(prefix, selection)
+		responseFields = append(responseFields, rf)
 	}
 
 	return responseFields
 }
 
-func (r *SourceGenerator) NewResponseFieldsByDefinition(definition *ast.Definition) (ResponseFieldList, error) {
-	fields := make(ResponseFieldList, 0, len(definition.Fields))
-	for _, field := range definition.Fields {
-		if field.Type.Name() == "__Schema" || field.Type.Name() == "__Type" {
-			continue
-		}
-
-		var typ types.Type
-		if field.Type.Name() == "Query" || field.Type.Name() == "Mutation" || field.Type.Name() == "Subscription" {
-			var baseType types.Type
-			baseType, err := r.binder.FindType(r.client.Pkg().Path(), field.Type.Name())
-			if err != nil {
-				if !strings.Contains(err.Error(), "unable to find type") {
-					return nil, fmt.Errorf("not found type: %w", err)
-				}
-
-				// create new type
-				baseType = types.NewPointer(types.NewNamed(
-					types.NewTypeName(0, r.client.Pkg(), templates.ToGo(field.Type.Name()), nil),
-					nil,
-					nil,
-				))
-			}
-
-			// for recursive struct field in go
-			typ = types.NewPointer(baseType)
-		} else {
-			baseType, err := r.binder.FindTypeFromName(r.cfg.Models[field.Type.Name()].Model[0])
-			if err != nil {
-				return nil, fmt.Errorf("not found type: %w", err)
-			}
-
-			typ = r.binder.CopyModifiersFromAst(field.Type, baseType)
-		}
-
-		tags := []string{
-			fmt.Sprintf(`json:"%s"`, field.Name),
-		}
-
-		fields = append(fields, &ResponseField{
-			Name: field.Name,
-			Type: typ,
-			Tags: tags,
-		})
+func (r *SourceGenerator) namedType(name string, gen func() types.Type) types.Type {
+	if gt := r.GetGenType(name); gt != nil {
+		return gt.RefType
 	}
 
-	return fields, nil
+	if r.cfg.Models.Exists(name) {
+		model := r.cfg.Models[name].Model[0]
+		fmt.Printf("%s is already declared: %v\n", name, model)
+
+		typ, err := r.binder.FindTypeFromName(model)
+		if err != nil {
+			panic(fmt.Errorf("cannot get type for %v: %w", name, err))
+		}
+
+		return typ
+	} else {
+		r.cfg.Models.Add(
+			name,
+			fmt.Sprintf("%s.%s", r.client.ImportPath(), name),
+		)
+
+		return gen()
+	}
 }
 
-func (r *SourceGenerator) NewResponseField(selection ast.Selection) *ResponseField {
+func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields ResponseFieldList) types.Type {
+	fullName := name
+	if prefix != "" {
+		fullName = prefix + "_" + fullName
+	}
+
+	vars := make([]*types.Var, 0, len(fieldsResponseFields))
+	tags := make([]string, 0, len(fieldsResponseFields))
+	unmarshalTypes := map[string]TypeTarget{}
+	for _, field := range fieldsResponseFields {
+		typ := field.Type
+		fieldName := templates.ToGo(field.Name)
+		if field.IsInlineFragment {
+			unmarshalTypes[field.Name] = TypeTarget{
+				Type: typ,
+				Name: fieldName,
+			}
+			typ = types.NewPointer(typ)
+		}
+
+		vars = append(vars, types.NewVar(0, nil, fieldName, typ))
+		tags = append(tags, strings.Join(field.Tags, " "))
+	}
+
+	typ := types.NewStruct(vars, tags)
+
+	refType := types.NewNamed(
+		types.NewTypeName(0, r.client.Pkg(), fullName, nil),
+		nil,
+		nil,
+	)
+
+	r.RegisterGenType(fullName, &Type{
+		Name:           fullName,
+		Type:           typ,
+		RefType:        refType,
+		UnmarshalTypes: unmarshalTypes,
+	})
+
+	return refType
+}
+
+func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selection) *ResponseField {
 	switch selection := selection.(type) {
 	case *ast.Field:
-		fieldsResponseFields := r.NewResponseFields(selection.SelectionSet)
+		fieldsResponseFields := r.NewResponseFields(prefix, &selection.SelectionSet)
 
 		var baseType types.Type
 		switch {
 		case fieldsResponseFields.IsBasicType():
 			baseType = r.Type(selection.Definition.Type.Name())
 		case fieldsResponseFields.IsFragment():
-			// 子フィールドがFragmentの場合はこのFragmentがフィールドの型になる
 			// if a child field is fragment, this field type became fragment.
 			baseType = fieldsResponseFields[0].Type
 		case fieldsResponseFields.IsStructType():
-			baseType = fieldsResponseFields.StructType()
+			typ := r.genStruct(prefix, templates.ToGo(selection.Name), fieldsResponseFields)
+			baseType = typ
 		default:
 			// ここにきたらバグ
 			// here is bug
@@ -162,25 +213,18 @@ func (r *SourceGenerator) NewResponseField(selection ast.Selection) *ResponseFie
 		// return pointer type then optional type or slice pointer then slice type of definition in GraphQL.
 		typ := r.binder.CopyModifiersFromAst(selection.Definition.Type, baseType)
 
-		tags := []string{
-			fmt.Sprintf(`json:"%s"`, selection.Alias),
-		}
-
 		return &ResponseField{
-			Name:           selection.Alias,
-			Type:           typ,
-			Tags:           tags,
+			Name: selection.Alias,
+			Type: typ,
+			Tags: []string{
+				fmt.Sprintf(`json:"%s"`, selection.Alias),
+			},
 			ResponseFields: fieldsResponseFields,
 		}
 
 	case *ast.FragmentSpread:
-		// この構造体はテンプレート側で使われることはなく、ast.FieldでFragment判定するために使用する
-		fieldsResponseFields := r.NewResponseFields(selection.Definition.SelectionSet)
-		typ := types.NewNamed(
-			types.NewTypeName(0, r.client.Pkg(), templates.ToGo(selection.Name), nil),
-			fieldsResponseFields.StructType(),
-			nil,
-		)
+		fieldsResponseFields := r.NewResponseFields(prefix, &selection.Definition.SelectionSet)
+		typ := r.GetGenType(selection.Definition.Name).RefType
 
 		return &ResponseField{
 			Name:             selection.Name,
@@ -191,14 +235,15 @@ func (r *SourceGenerator) NewResponseField(selection ast.Selection) *ResponseFie
 
 	case *ast.InlineFragment:
 		// InlineFragmentは子要素をそのままstructとしてもつので、ここで、構造体の型を作成します
-		fieldsResponseFields := r.NewResponseFields(selection.SelectionSet)
+		fieldsResponseFields := r.NewResponseFields(prefix, &selection.SelectionSet)
+		typ := r.genStruct(prefix, selection.TypeCondition, fieldsResponseFields)
 
 		return &ResponseField{
 			Name:             selection.TypeCondition,
-			Type:             fieldsResponseFields.StructType(),
+			Type:             typ,
 			IsInlineFragment: true,
-			Tags:             []string{fmt.Sprintf(`graphql:"... on %s"`, selection.TypeCondition)},
 			ResponseFields:   fieldsResponseFields,
+			Tags:             []string{`json:"-"`},
 		}
 	}
 
