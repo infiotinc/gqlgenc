@@ -18,15 +18,17 @@
 	}
 {{- end }}
 
-{{/* Greek character used to prevent name conflicts */}}
+{{/* Greek character used to prevent name conflicts: */}}
+{{/* > prefix with Ξ */}}
+{{/* > ctх (х in cyrillic alphabet) because it is user facing */}}
 
 {{- range $name, $element := .Types }}
 	type {{ .Name  }} {{ .Type | ref }}
 
     {{- if .UnmarshalTypes }}
     func (t *{{ .Name }}) UnmarshalJSON(data []byte) error {
-        type Aliαs {{ .Name }}
-        var r Aliαs
+        type ΞAlias {{ .Name }}
+        var r ΞAlias
 
         err := json.Unmarshal(data, &r)
         if err != nil {
@@ -64,15 +66,15 @@
                 Extensions transport.RawExtensions
             }
 
-            func (ϲ *Client) {{ $op.Name|go }} (ctϰ context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $op.Name|go }}, func()) {
-                vαrs := map[string]interface{}{
+            func (Ξc *Client) {{ $op.Name|go }} (ctх context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $op.Name|go }}, func()) {
+                Ξvars := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
                 }
 
                 { {{/* New block to prevent var names conflicts */}}
-                    res := ϲ.Client.Subscription(ctϰ, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vαrs)
+                    res := Ξc.Client.Subscription(ctх, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, Ξvars)
 
                     ch := make(chan Message{{ $op.Name|go }})
 
@@ -107,8 +109,8 @@
                 }
             }
         {{- else}}
-            func (ϲ *Client) {{ $op.Name|go }} (ctϰ context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $op.ResponseType | ref }}, transport.OperationResponse, error) {
-                vαrs := map[string]interface{}{
+            func (Ξc *Client) {{ $op.Name|go }} (ctх context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $op.ResponseType | ref }}, transport.OperationResponse, error) {
+                Ξvars := map[string]interface{}{
                 {{- range $args := .VariableDefinitions}}
                     "{{ $args.Variable }}": {{ $args.Variable | goPrivate }},
                 {{- end }}
@@ -116,7 +118,7 @@
 
                 { {{/* New block to prevent var names conflicts */}}
                     var data {{ $op.ResponseType | ref }}
-                    res, err := ϲ.Client.{{ $op.OperationType|ucFirst }}(ctϰ, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, vαrs, &data)
+                    res, err := Ξc.Client.{{ $op.OperationType|ucFirst }}(ctх, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, Ξvars, &data)
                     if err != nil {
                         return nil, transport.OperationResponse{}, err
                     }
