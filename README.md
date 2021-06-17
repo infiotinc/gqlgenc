@@ -1,7 +1,5 @@
 # gqlgenc
 
-> **Note**: ⚠️ This is a WIP, backward-compatibility cannot be guaranteed yet, use at your own risk
-
 > gqlgenc is a fully featured go gql client, powered by codegen 
 
 ## Why yet another Go GQL client ?
