@@ -11,6 +11,8 @@ models:
     model: github.com/99designs/gqlgen/graphql.Time
   GetRoomCustom:
     model: example/somelib.CustomRoom
+  Upload:
+    model: github.com/infiotinc/gqlgenc/client/transport.Upload
 schema:
   - schema.graphql
 query:

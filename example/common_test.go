@@ -68,6 +68,7 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 	}))
 
 	h.AddTransport(htransport.POST{})
+	h.AddTransport(htransport.MultipartForm{})
 	h.AddTransport(htransport.Websocket{
 		KeepAlivePingInterval: 500 * time.Millisecond,
 		Upgrader: websocket.Upgrader{

@@ -1,4 +1,5 @@
 scalar Time
+scalar Upload
 
 union Media = Image | Video
 
@@ -47,8 +48,24 @@ input PostCreateInput {
     text: String!
 }
 
+type UploadData {
+    size: Int!
+}
+
+
+input UploadFilesMapInput {
+    somefile: Upload!
+}
+
+type UploadFilesMap {
+    somefile: UploadData!
+}
+
 type Mutation {
     post(input: PostCreateInput!): Message!
+    uploadFile(file: Upload!): UploadData!
+    uploadFiles(files: [Upload!]!): [UploadData!]
+    uploadFilesMap(files: UploadFilesMapInput!): UploadFilesMap!
 }
 
 type Subscription {

@@ -151,6 +151,26 @@ gql.GetRoom(...)
 cli.Use(&extensions.APQ{})
 ```
 
+## File Upload
+
+- In the `Http` transport, set `UseFormMultipart` to `true`
+
+- In `.gqlgenc.yaml`:
+
+```yaml
+models:
+  Upload:
+    model: github.com/infiotinc/gqlgenc/client/transport.Upload
+```
+
+- Enjoy!
+
+```go
+up := transport.NewUpload(someFile)
+
+_, _, err := gql.MyUploadFile(ctx, up)
+```
+
 ## Release
 
     TAG=v0.0.x make tag

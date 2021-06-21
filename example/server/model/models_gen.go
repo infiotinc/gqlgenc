@@ -4,6 +4,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/99designs/gqlgen/graphql"
 )
 
 type Book interface {
@@ -49,6 +51,18 @@ type Textbook struct {
 }
 
 func (Textbook) IsBook() {}
+
+type UploadData struct {
+	Size int `json:"size"`
+}
+
+type UploadFilesMap struct {
+	Somefile *UploadData `json:"somefile"`
+}
+
+type UploadFilesMapInput struct {
+	Somefile graphql.Upload `json:"somefile"`
+}
 
 type Video struct {
 	Duration int `json:"duration"`

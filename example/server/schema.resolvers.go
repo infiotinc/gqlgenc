@@ -11,11 +11,37 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/99designs/gqlgen/graphql"
 )
 
 func (r *mutationResolver) Post(ctx context.Context, input model.PostCreateInput) (*model.Message, error) {
 	return &model.Message{
 		Text: input.Text,
+	}, nil
+}
+
+func (r *mutationResolver) UploadFile(ctx context.Context, file graphql.Upload) (*model.UploadData, error) {
+	return &model.UploadData{
+		Size: int(file.Size),
+	}, nil
+}
+
+func (r *mutationResolver) UploadFiles(ctx context.Context, files []*graphql.Upload) ([]*model.UploadData, error) {
+	ds := make([]*model.UploadData, 0)
+	for _, f := range files {
+		ds = append(ds, &model.UploadData{
+			Size: int(f.Size),
+		})
+	}
+	return ds, nil
+}
+
+func (r *mutationResolver) UploadFilesMap(ctx context.Context, files model.UploadFilesMapInput) (*model.UploadFilesMap, error) {
+	return &model.UploadFilesMap{
+		Somefile: &model.UploadData{
+			Size: int(files.Somefile.Size),
+		},
 	}, nil
 }
 

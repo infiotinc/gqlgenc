@@ -4,6 +4,8 @@ package client
 
 import (
 	"time"
+
+	"github.com/infiotinc/gqlgenc/client/transport"
 )
 
 type Book interface {
@@ -49,6 +51,18 @@ type Textbook struct {
 }
 
 func (Textbook) IsBook() {}
+
+type UploadData struct {
+	Size int64 `json:"size"`
+}
+
+type UploadFilesMap struct {
+	Somefile *UploadData `json:"somefile"`
+}
+
+type UploadFilesMapInput struct {
+	Somefile transport.Upload `json:"somefile"`
+}
 
 type Video struct {
 	Duration int64 `json:"duration"`

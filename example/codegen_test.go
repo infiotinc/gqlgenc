@@ -3,7 +3,12 @@ package example
 import (
 	"context"
 	"example/client"
+	client2 "github.com/infiotinc/gqlgenc/client"
+	"github.com/infiotinc/gqlgenc/client/transport"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -191,4 +196,112 @@ func TestMutationInput(t *testing.T) {
 	}
 
 	assert.Equal(t, "some text", res.Post.Text)
+}
+
+func uploadcli(ctx context.Context) (*client2.Client, func()) {
+	return clifactory(ctx, func(ts *httptest.Server) (transport.Transport, func()) {
+		tr := httptr(ctx, ts.URL)
+		tr.UseFormMultipart = true
+
+		return tr, nil
+	})
+}
+
+func createUploadFile(t *testing.T) (transport.Upload, int64, func()) {
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.WriteString("some content")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = f.Sync()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	up := transport.NewUpload(f)
+
+	return up, 12, func() {
+		os.Remove(f.Name())
+	}
+}
+
+func TestMutationUploadFile(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td := uploadcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	up, l, rm := createUploadFile(t)
+	defer rm()
+
+	res, _, err := gql.MyUploadFile(ctx, up)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, l, res.UploadFile.Size)
+}
+
+func TestMutationUploadFiles(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td := uploadcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	up, l, rm := createUploadFile(t)
+	defer rm()
+
+	res, _, err := gql.MyUploadFiles(ctx, []*transport.Upload{&up})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, l, res.UploadFiles[0].Size)
+}
+
+func TestMutationUploadFilesMap(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td := uploadcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	up, l, rm := createUploadFile(t)
+	defer rm()
+
+	res, _, err := gql.MyUploadFilesMap(ctx, client.UploadFilesMapInput{
+		Somefile: up,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, l, res.UploadFilesMap.Somefile.Size)
 }
