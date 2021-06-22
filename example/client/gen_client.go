@@ -143,26 +143,26 @@ type CreatePost_Post struct {
 type CreatePost struct {
 	Post CreatePost_Post "json:\"post\""
 }
-type MyUploadFile_UploadFile struct {
+type UploadFile_UploadFile struct {
 	Size int64 "json:\"size\""
 }
-type MyUploadFile struct {
-	UploadFile MyUploadFile_UploadFile "json:\"uploadFile\""
+type UploadFile struct {
+	UploadFile UploadFile_UploadFile "json:\"uploadFile\""
 }
-type MyUploadFiles_UploadFiles struct {
+type UploadFiles_UploadFiles struct {
 	Size int64 "json:\"size\""
 }
-type MyUploadFiles struct {
-	UploadFiles []MyUploadFiles_UploadFiles "json:\"uploadFiles\""
+type UploadFiles struct {
+	UploadFiles []UploadFiles_UploadFiles "json:\"uploadFiles\""
 }
-type MyUploadFilesMap_Somefile struct {
+type UploadFilesMap_Somefile struct {
 	Size int64 "json:\"size\""
 }
-type MyUploadFilesMap_UploadFilesMap struct {
-	Somefile MyUploadFilesMap_Somefile "json:\"somefile\""
+type UploadFilesMap_UploadFilesMap struct {
+	Somefile UploadFilesMap_Somefile "json:\"somefile\""
 }
-type MyUploadFilesMap struct {
-	UploadFilesMap MyUploadFilesMap_UploadFilesMap "json:\"uploadFilesMap\""
+type UploadFilesMap struct {
+	UploadFilesMap UploadFilesMap_UploadFilesMap "json:\"uploadFilesMap\""
 }
 type Issue8_A struct {
 	Aa string "json:\"Aa\""
@@ -407,21 +407,21 @@ func (Ξc *Client) CreatePost(ctх context.Context, input PostCreateInput) (*Cre
 	}
 }
 
-const MyUploadFileDocument = `mutation MyUploadFile ($file: Upload!) {
+const UploadFileDocument = `mutation UploadFile ($file: Upload!) {
 	uploadFile(file: $file) {
 		size
 	}
 }
 `
 
-func (Ξc *Client) MyUploadFile(ctх context.Context, file transport.Upload) (*MyUploadFile, transport.OperationResponse, error) {
+func (Ξc *Client) UploadFile(ctх context.Context, file transport.Upload) (*UploadFile, transport.OperationResponse, error) {
 	Ξvars := map[string]interface{}{
 		"file": file,
 	}
 
 	{
-		var data MyUploadFile
-		res, err := Ξc.Client.Mutation(ctх, "MyUploadFile", MyUploadFileDocument, Ξvars, &data)
+		var data UploadFile
+		res, err := Ξc.Client.Mutation(ctх, "UploadFile", UploadFileDocument, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -430,21 +430,21 @@ func (Ξc *Client) MyUploadFile(ctх context.Context, file transport.Upload) (*M
 	}
 }
 
-const MyUploadFilesDocument = `mutation MyUploadFiles ($files: [Upload!]!) {
+const UploadFilesDocument = `mutation UploadFiles ($files: [Upload!]!) {
 	uploadFiles(files: $files) {
 		size
 	}
 }
 `
 
-func (Ξc *Client) MyUploadFiles(ctх context.Context, files []*transport.Upload) (*MyUploadFiles, transport.OperationResponse, error) {
+func (Ξc *Client) UploadFiles(ctх context.Context, files []*transport.Upload) (*UploadFiles, transport.OperationResponse, error) {
 	Ξvars := map[string]interface{}{
 		"files": files,
 	}
 
 	{
-		var data MyUploadFiles
-		res, err := Ξc.Client.Mutation(ctх, "MyUploadFiles", MyUploadFilesDocument, Ξvars, &data)
+		var data UploadFiles
+		res, err := Ξc.Client.Mutation(ctх, "UploadFiles", UploadFilesDocument, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -453,7 +453,7 @@ func (Ξc *Client) MyUploadFiles(ctх context.Context, files []*transport.Upload
 	}
 }
 
-const MyUploadFilesMapDocument = `mutation MyUploadFilesMap ($files: UploadFilesMapInput!) {
+const UploadFilesMapDocument = `mutation UploadFilesMap ($files: UploadFilesMapInput!) {
 	uploadFilesMap(files: $files) {
 		somefile {
 			size
@@ -462,14 +462,14 @@ const MyUploadFilesMapDocument = `mutation MyUploadFilesMap ($files: UploadFiles
 }
 `
 
-func (Ξc *Client) MyUploadFilesMap(ctх context.Context, files UploadFilesMapInput) (*MyUploadFilesMap, transport.OperationResponse, error) {
+func (Ξc *Client) UploadFilesMap(ctх context.Context, files UploadFilesMapInput) (*UploadFilesMap, transport.OperationResponse, error) {
 	Ξvars := map[string]interface{}{
 		"files": files,
 	}
 
 	{
-		var data MyUploadFilesMap
-		res, err := Ξc.Client.Mutation(ctх, "MyUploadFilesMap", MyUploadFilesMapDocument, Ξvars, &data)
+		var data UploadFilesMap
+		res, err := Ξc.Client.Mutation(ctх, "UploadFilesMap", UploadFilesMapDocument, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}

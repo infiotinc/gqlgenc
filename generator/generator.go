@@ -5,7 +5,6 @@ package generator
 import (
 	"context"
 	"fmt"
-	"github.com/99designs/gqlgen/plugin/modelgen"
 	"github.com/infiotinc/gqlgenc/config"
 
 	"github.com/99designs/gqlgen/api"
@@ -14,9 +13,6 @@ import (
 
 func Generate(ctx context.Context, cfg *config.Config, option ...api.Option) error {
 	var plugins []plugin.Plugin
-	if cfg.Model.IsDefined() {
-		plugins = append(plugins, modelgen.New())
-	}
 	for _, o := range option {
 		o(cfg.GQLConfig, &plugins)
 	}

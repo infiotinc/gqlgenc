@@ -62,19 +62,19 @@ mutation CreatePost($input: PostCreateInput!) {
     }
 }
 
-mutation MyUploadFile($file: Upload!) {
+mutation UploadFile($file: Upload!) {
     uploadFile(file: $file) {
         size
     }
 }
 
-mutation MyUploadFiles($files: [Upload!]!) {
+mutation UploadFiles($files: [Upload!]!) {
     uploadFiles(files: $files) {
         size
     }
 }
 
-mutation MyUploadFilesMap($files: UploadFilesMapInput!) {
+mutation UploadFilesMap($files: UploadFilesMapInput!) {
     uploadFilesMap(files: $files) {
         somefile {
             size

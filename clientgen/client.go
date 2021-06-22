@@ -2,10 +2,11 @@ package clientgen
 
 import (
 	"fmt"
-
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/plugin"
+	"github.com/99designs/gqlgen/plugin/modelgen"
 	gqlgencConfig "github.com/infiotinc/gqlgenc/config"
+	"github.com/vektah/gqlparser/v2/ast"
 )
 
 var _ plugin.ConfigMutator = &Plugin{}
@@ -28,6 +29,33 @@ func (p *Plugin) Name() string {
 	return "clientgen"
 }
 
+// Only use modelgen for input types
+func (p *Plugin) ModelGenMutateConfig(cfg *config.Config) error {
+	schema := &ast.Schema{
+		Types: map[string]*ast.Definition{},
+	}
+	for name, def := range cfg.Schema.Types {
+		if def.IsInputType() {
+			schema.Types[name] = def
+		}
+	}
+
+	return modelgen.New().(*modelgen.Plugin).MutateConfig(&config.Config{
+		Model:                    cfg.Model,
+		Federation:               cfg.Federation,
+		Resolver:                 cfg.Resolver,
+		Models:                   cfg.Models,
+		StructTag:                cfg.StructTag,
+		Directives:               cfg.Directives,
+		OmitSliceElementPointers: cfg.OmitSliceElementPointers,
+		SkipValidation:           cfg.SkipValidation,
+		Sources:                  cfg.Sources,
+		Packages:                 cfg.Packages,
+		Schema:                   schema,
+		Federated:                cfg.Federated,
+	})
+}
+
 func (p *Plugin) MutateConfig(cfg *config.Config) error {
 	querySources, err := LoadQuerySources(p.queryFilePaths)
 	if err != nil {
@@ -46,6 +74,11 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 	queryDocuments, err := QueryDocumentsByOperations(cfg.Schema, queryDocument.Operations)
 	if err != nil {
 		return fmt.Errorf("parse query document failed: %w", err)
+	}
+
+	err = p.ModelGenMutateConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("modelgen: %w", err)
 	}
 
 	// 3. テンプレートと情報ソースを元にコード生成

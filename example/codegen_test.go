@@ -250,7 +250,7 @@ func TestMutationUploadFile(t *testing.T) {
 	up, l, rm := createUploadFile(t)
 	defer rm()
 
-	res, _, err := gql.MyUploadFile(ctx, up)
+	res, _, err := gql.UploadFile(ctx, up)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +273,7 @@ func TestMutationUploadFiles(t *testing.T) {
 	up, l, rm := createUploadFile(t)
 	defer rm()
 
-	res, _, err := gql.MyUploadFiles(ctx, []*transport.Upload{&up})
+	res, _, err := gql.UploadFiles(ctx, []*transport.Upload{&up})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestMutationUploadFilesMap(t *testing.T) {
 	up, l, rm := createUploadFile(t)
 	defer rm()
 
-	res, _, err := gql.MyUploadFilesMap(ctx, client.UploadFilesMapInput{
+	res, _, err := gql.UploadFilesMap(ctx, client.UploadFilesMapInput{
 		Somefile: up,
 	})
 	if err != nil {

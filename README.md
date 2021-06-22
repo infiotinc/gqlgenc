@@ -163,7 +163,7 @@ models:
     model: github.com/infiotinc/gqlgenc/client/transport.Upload
 ```
 
-- Enjoy!
+- Profit
 
 ```go
 up := transport.NewUpload(someFile)
