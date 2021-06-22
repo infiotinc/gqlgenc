@@ -101,6 +101,10 @@ type ComplexityRoot struct {
 	}
 
 	SomeExtraTypeChild struct {
+		Child func(childComplexity int) int
+	}
+
+	SomeExtraTypeChildChild struct {
 		ID func(childComplexity int) int
 	}
 
@@ -349,12 +353,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SomeExtraType.Child(childComplexity), true
 
-	case "SomeExtraTypeChild.id":
-		if e.complexity.SomeExtraTypeChild.ID == nil {
+	case "SomeExtraTypeChild.child":
+		if e.complexity.SomeExtraTypeChild.Child == nil {
 			break
 		}
 
-		return e.complexity.SomeExtraTypeChild.ID(childComplexity), true
+		return e.complexity.SomeExtraTypeChild.Child(childComplexity), true
+
+	case "SomeExtraTypeChildChild.id":
+		if e.complexity.SomeExtraTypeChildChild.ID == nil {
+			break
+		}
+
+		return e.complexity.SomeExtraTypeChildChild.ID(childComplexity), true
 
 	case "Subscription.messageAdded":
 		if e.complexity.Subscription.MessageAdded == nil {
@@ -577,6 +588,9 @@ type SomeExtraType {
 }
 
 type SomeExtraTypeChild {
+    child: SomeExtraTypeChildChild!
+}
+type SomeExtraTypeChildChild {
     id: String!
 }
 `, BuiltIn: false},
@@ -1654,7 +1668,7 @@ func (ec *executionContext) _SomeExtraType_child(ctx context.Context, field grap
 	return ec.marshalNSomeExtraTypeChild2ᚖexampleᚋserverᚋmodelᚐSomeExtraTypeChild(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SomeExtraTypeChild_id(ctx context.Context, field graphql.CollectedField, obj *model.SomeExtraTypeChild) (ret graphql.Marshaler) {
+func (ec *executionContext) _SomeExtraTypeChild_child(ctx context.Context, field graphql.CollectedField, obj *model.SomeExtraTypeChild) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1663,6 +1677,41 @@ func (ec *executionContext) _SomeExtraTypeChild_id(ctx context.Context, field gr
 	}()
 	fc := &graphql.FieldContext{
 		Object:     "SomeExtraTypeChild",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Child, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.SomeExtraTypeChildChild)
+	fc.Result = res
+	return ec.marshalNSomeExtraTypeChildChild2ᚖexampleᚋserverᚋmodelᚐSomeExtraTypeChildChild(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SomeExtraTypeChildChild_id(ctx context.Context, field graphql.CollectedField, obj *model.SomeExtraTypeChildChild) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "SomeExtraTypeChildChild",
 		Field:      field,
 		Args:       nil,
 		IsMethod:   false,
@@ -3491,8 +3540,35 @@ func (ec *executionContext) _SomeExtraTypeChild(ctx context.Context, sel ast.Sel
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("SomeExtraTypeChild")
+		case "child":
+			out.Values[i] = ec._SomeExtraTypeChild_child(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var someExtraTypeChildChildImplementors = []string{"SomeExtraTypeChildChild"}
+
+func (ec *executionContext) _SomeExtraTypeChildChild(ctx context.Context, sel ast.SelectionSet, obj *model.SomeExtraTypeChildChild) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, someExtraTypeChildChildImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SomeExtraTypeChildChild")
 		case "id":
-			out.Values[i] = ec._SomeExtraTypeChild_id(ctx, field, obj)
+			out.Values[i] = ec._SomeExtraTypeChildChild_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4122,6 +4198,16 @@ func (ec *executionContext) marshalNSomeExtraTypeChild2ᚖexampleᚋserverᚋmod
 		return graphql.Null
 	}
 	return ec._SomeExtraTypeChild(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSomeExtraTypeChildChild2ᚖexampleᚋserverᚋmodelᚐSomeExtraTypeChildChild(ctx context.Context, sel ast.SelectionSet, v *model.SomeExtraTypeChildChild) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._SomeExtraTypeChildChild(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {

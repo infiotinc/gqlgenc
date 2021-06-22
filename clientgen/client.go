@@ -49,13 +49,19 @@ func (p *Plugin) ShouldGenType(def *ast.Definition) bool {
 	return false
 }
 
-func (p *Plugin) typeDeps(def *ast.Definition, types map[string]*ast.Definition) map[string]*ast.Definition {
-	deps := map[string]*ast.Definition{}
+func (p *Plugin) typeDeps(def *ast.Definition, types map[string]*ast.Definition, deps map[string]*ast.Definition) {
 	for _, f := range def.Fields {
-		deps[f.Type.Name()] = types[f.Type.Name()]
-	}
+		name := f.Type.Name()
 
-	return deps
+		if _, ok := deps[name]; ok {
+			continue
+		}
+
+		dep := types[name]
+		deps[name] = dep
+
+		p.typeDeps(dep, types, deps)
+	}
 }
 
 // ModelGenMutateConfig Only uses modelgen for specific types
@@ -67,7 +73,10 @@ func (p *Plugin) ModelGenMutateConfig(cfg *config.Config) error {
 		if p.ShouldGenType(def) {
 			schema.Types[name] = def
 
-			for dname, ddef := range p.typeDeps(def, cfg.Schema.Types) {
+			deps := map[string]*ast.Definition{}
+			p.typeDeps(def, cfg.Schema.Types, deps)
+
+			for dname, ddef := range deps {
 				schema.Types[dname] = ddef
 			}
 		}

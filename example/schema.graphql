@@ -91,5 +91,8 @@ type SomeExtraType {
 }
 
 type SomeExtraTypeChild {
+    child: SomeExtraTypeChildChild!
+}
+type SomeExtraTypeChildChild {
     id: String!
 }
