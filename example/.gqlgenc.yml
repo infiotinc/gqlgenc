@@ -3,7 +3,6 @@ model:
   package: client
   extra_types:
     - SomeExtraType
-    - SomeExtraTypeChild
 client:
   filename: ./client/gen_client.go
   package: client
