@@ -18,7 +18,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	clientGen := api.AddPlugin(clientgen.New(cfg.Query, cfg.Client, cfg.Generate))
+	clientGen := api.AddPlugin(clientgen.New(cfg.Query, cfg.Client, cfg.Generate, cfg.Model.ExtraTypes))
 
 	if err := generator.Generate(ctx, cfg, clientGen); err != nil {
 		fmt.Fprintf(os.Stderr, "generate: %+v", err.Error())

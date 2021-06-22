@@ -58,6 +58,14 @@ type PostCreateInput struct {
 	Text string `json:"text"`
 }
 
+type SomeExtraType struct {
+	Child *SomeExtraTypeChild `json:"child"`
+}
+
+type SomeExtraTypeChild struct {
+	ID string `json:"id"`
+}
+
 type Textbook struct {
 	Title   string   `json:"title"`
 	Courses []string `json:"courses"`

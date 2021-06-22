@@ -15,13 +15,15 @@ type Plugin struct {
 	queryFilePaths []string
 	Client         config.PackageConfig
 	GenerateConfig *gqlgencConfig.GenerateConfig
+	ExtraTypes     []string
 }
 
-func New(queryFilePaths []string, client config.PackageConfig, generateConfig *gqlgencConfig.GenerateConfig) *Plugin {
+func New(queryFilePaths []string, client config.PackageConfig, generateConfig *gqlgencConfig.GenerateConfig, extraTypes []string) *Plugin {
 	return &Plugin{
 		queryFilePaths: queryFilePaths,
 		Client:         client,
 		GenerateConfig: generateConfig,
+		ExtraTypes:     extraTypes,
 	}
 }
 
@@ -29,13 +31,31 @@ func (p *Plugin) Name() string {
 	return "clientgen"
 }
 
-// Only use modelgen for input types
+func (p *Plugin) ShouldGenType(def *ast.Definition) bool {
+	if def.BuiltIn {
+		return true
+	}
+
+	if def.IsInputType() {
+		return true
+	}
+
+	for _, t := range p.ExtraTypes {
+		if t == def.Name {
+			return true
+		}
+	}
+
+	return false
+}
+
+// ModelGenMutateConfig Only uses modelgen for specific types
 func (p *Plugin) ModelGenMutateConfig(cfg *config.Config) error {
 	schema := &ast.Schema{
 		Types: map[string]*ast.Definition{},
 	}
 	for name, def := range cfg.Schema.Types {
-		if def.IsInputType() {
+		if p.ShouldGenType(def) {
 			schema.Types[name] = def
 		}
 	}
@@ -57,6 +77,11 @@ func (p *Plugin) ModelGenMutateConfig(cfg *config.Config) error {
 }
 
 func (p *Plugin) MutateConfig(cfg *config.Config) error {
+	err := p.ModelGenMutateConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("modelgen: %w", err)
+	}
+
 	querySources, err := LoadQuerySources(p.queryFilePaths)
 	if err != nil {
 		return fmt.Errorf("load query sources failed: %w", err)
@@ -74,11 +99,6 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 	queryDocuments, err := QueryDocumentsByOperations(cfg.Schema, queryDocument.Operations)
 	if err != nil {
 		return fmt.Errorf("parse query document failed: %w", err)
-	}
-
-	err = p.ModelGenMutateConfig(cfg)
-	if err != nil {
-		return fmt.Errorf("modelgen: %w", err)
 	}
 
 	// 3. テンプレートと情報ソースを元にコード生成

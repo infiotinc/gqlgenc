@@ -96,6 +96,14 @@ type ComplexityRoot struct {
 		RoomNonNull func(childComplexity int, name string) int
 	}
 
+	SomeExtraType struct {
+		Child func(childComplexity int) int
+	}
+
+	SomeExtraTypeChild struct {
+		ID func(childComplexity int) int
+	}
+
 	Subscription struct {
 		MessageAdded func(childComplexity int, roomName string) int
 	}
@@ -334,6 +342,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.RoomNonNull(childComplexity, args["name"].(string)), true
 
+	case "SomeExtraType.child":
+		if e.complexity.SomeExtraType.Child == nil {
+			break
+		}
+
+		return e.complexity.SomeExtraType.Child(childComplexity), true
+
+	case "SomeExtraTypeChild.id":
+		if e.complexity.SomeExtraTypeChild.ID == nil {
+			break
+		}
+
+		return e.complexity.SomeExtraTypeChild.ID(childComplexity), true
+
 	case "Subscription.messageAdded":
 		if e.complexity.Subscription.MessageAdded == nil {
 			break
@@ -548,6 +570,14 @@ type Mutation {
 
 type Subscription {
     messageAdded(roomName: String!): Message!
+}
+
+type SomeExtraType {
+    child: SomeExtraTypeChild!
+}
+
+type SomeExtraTypeChild {
+    id: String!
 }
 `, BuiltIn: false},
 }
@@ -1587,6 +1617,76 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	res := resTmp.(*introspection.Schema)
 	fc.Result = res
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SomeExtraType_child(ctx context.Context, field graphql.CollectedField, obj *model.SomeExtraType) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "SomeExtraType",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Child, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.SomeExtraTypeChild)
+	fc.Result = res
+	return ec.marshalNSomeExtraTypeChild2ᚖexampleᚋserverᚋmodelᚐSomeExtraTypeChild(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SomeExtraTypeChild_id(ctx context.Context, field graphql.CollectedField, obj *model.SomeExtraTypeChild) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "SomeExtraTypeChild",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Subscription_messageAdded(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
@@ -3353,6 +3453,60 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
+var someExtraTypeImplementors = []string{"SomeExtraType"}
+
+func (ec *executionContext) _SomeExtraType(ctx context.Context, sel ast.SelectionSet, obj *model.SomeExtraType) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, someExtraTypeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SomeExtraType")
+		case "child":
+			out.Values[i] = ec._SomeExtraType_child(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var someExtraTypeChildImplementors = []string{"SomeExtraTypeChild"}
+
+func (ec *executionContext) _SomeExtraTypeChild(ctx context.Context, sel ast.SelectionSet, obj *model.SomeExtraTypeChild) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, someExtraTypeChildImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SomeExtraTypeChild")
+		case "id":
+			out.Values[i] = ec._SomeExtraTypeChild_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var subscriptionImplementors = []string{"Subscription"}
 
 func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func() graphql.Marshaler {
@@ -3958,6 +4112,16 @@ func (ec *executionContext) marshalNMessage2ᚖexampleᚋserverᚋmodelᚐMessag
 func (ec *executionContext) unmarshalNPostCreateInput2exampleᚋserverᚋmodelᚐPostCreateInput(ctx context.Context, v interface{}) (model.PostCreateInput, error) {
 	res, err := ec.unmarshalInputPostCreateInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSomeExtraTypeChild2ᚖexampleᚋserverᚋmodelᚐSomeExtraTypeChild(ctx context.Context, sel ast.SelectionSet, v *model.SomeExtraTypeChild) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._SomeExtraTypeChild(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {

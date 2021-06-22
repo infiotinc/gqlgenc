@@ -22,11 +22,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Model struct {
+	config.PackageConfig `yaml:",inline"`
+
+	ExtraTypes []string `yaml:"extra_types,omitempty"`
+}
+
 // Config extends the gqlgen basic config
 // and represents the config file
 type Config struct {
 	SchemaFilename StringList           `yaml:"schema,omitempty"`
-	Model          config.PackageConfig `yaml:"model,omitempty"`
+	Model          Model                `yaml:"model,omitempty"`
 	Client         config.PackageConfig `yaml:"client,omitempty"`
 	Models         config.TypeMap       `yaml:"models,omitempty"`
 	Endpoint       *EndPointConfig      `yaml:"endpoint,omitempty"`
@@ -200,7 +206,7 @@ func LoadConfig(filename string) (*Config, error) {
 	}
 
 	cfg.GQLConfig = &config.Config{
-		Model:  cfg.Model,
+		Model:  cfg.Model.PackageConfig,
 		Models: models,
 		// TODO: gqlgen must be set exec but client not used
 		Exec:       config.PackageConfig{Filename: "generated.go"},

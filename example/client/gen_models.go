@@ -10,6 +10,14 @@ type PostCreateInput struct {
 	Text string `json:"text"`
 }
 
+type SomeExtraType struct {
+	Child *SomeExtraTypeChild `json:"child"`
+}
+
+type SomeExtraTypeChild struct {
+	ID string `json:"id"`
+}
+
 type UploadFilesMapInput struct {
 	Somefile transport.Upload `json:"somefile"`
 }

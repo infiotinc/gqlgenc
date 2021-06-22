@@ -326,3 +326,10 @@ func TestIssue8(t *testing.T) {
 	assert.Equal(t, "foo1", res.Issue8.Foo1.A.Aa)
 	assert.Equal(t, "foo2", res.Issue8.Foo2.A.Aa)
 }
+
+func TestGenExtraType(t *testing.T) {
+	t.Parallel()
+
+	// This should fail compiling if the type is missing
+	_ = client.SomeExtraType{}
+}
