@@ -74,7 +74,7 @@
                 }
 
                 { {{/* New block to prevent var names conflicts */}}
-                    res := Ξc.Client.Subscription(ctх, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, Ξvars)
+                    res := Ξc.Client.Subscription(ctх, "{{ $op.Name }}", {{ $op.Name|go }}Document, Ξvars)
 
                     ch := make(chan Message{{ $op.Name|go }})
 
@@ -118,7 +118,7 @@
 
                 { {{/* New block to prevent var names conflicts */}}
                     var data {{ $op.ResponseType | ref }}
-                    res, err := Ξc.Client.{{ $op.OperationType|ucFirst }}(ctх, "{{ $op.Name|go }}", {{ $op.Name|go }}Document, Ξvars, &data)
+                    res, err := Ξc.Client.{{ $op.OperationType|ucFirst }}(ctх, "{{ $op.Name }}", {{ $op.Name|go }}Document, Ξvars, &data)
                     if err != nil {
                         return nil, transport.OperationResponse{}, err
                     }
