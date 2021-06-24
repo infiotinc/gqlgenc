@@ -130,6 +130,13 @@ type Ws struct {
 	log   bool
 }
 
+func (t *Ws) sendErr(err error) {
+	select {
+	case t.errCh <- err: // Attempt to write err
+	default:
+	}
+}
+
 func (t *Ws) init() {
 	t.o.Do(func() {
 		t.ops = make(map[string]*wsResponse)
@@ -231,11 +238,9 @@ func (t *Ws) run(inctx context.Context) {
 
 		select {
 		case <-inctx.Done():
-			if !t.running { // Unexpected cancel
-				err := inctx.Err()
-				t.printLog(GQL_INTERNAL, "CTX DONE", err)
-				t.errCh <- err
-			}
+			err := inctx.Err()
+			t.printLog(GQL_INTERNAL, "CTX DONE", err)
+			t.sendErr(err)
 			return
 		default:
 			// continue...
@@ -253,9 +258,7 @@ func (t *Ws) run(inctx context.Context) {
 			conn, err := t.WebsocketConnProvider(ctx, t.URL)
 			if err != nil {
 				t.printLog(GQL_INTERNAL, "WebsocketConnProvider ERR", err)
-
 				t.ResetWithErr(err)
-
 				time.Sleep(time.Second)
 				continue
 			}
@@ -266,7 +269,6 @@ func (t *Ws) run(inctx context.Context) {
 			err = t.sendConnectionInit()
 			if err != nil {
 				t.printLog(GQL_INTERNAL, "sendConnectionInit ERR", err)
-
 				t.ResetWithErr(err)
 				time.Sleep(time.Second)
 				continue
@@ -277,29 +279,29 @@ func (t *Ws) run(inctx context.Context) {
 
 		var message OperationMessage
 		if err := t.readJson(&message); err != nil {
+			// Is expected as part of conn.ReadJSON timeout, we have not received a message or
+			// a KA, the connection is probably dead... RIP
 			if errors.Is(err, context.DeadlineExceeded) {
 				t.printLog(GQL_INTERNAL, "READ DEADLINE EXCEEDED")
-				continue // Is expected as part of conn.ReadJSON timeout
+				t.ResetWithErr(err)
+				continue
 			}
-
-			//t.printLog(GQL_INTERNAL, "READ JSON ERR", err)
 
 			if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "EOF") {
 				t.printLog(GQL_INTERNAL, "EOF")
 				t.ResetWithErr(err)
 				continue
 			}
+
 			closeStatus := websocket.CloseStatus(err)
 			if closeStatus == websocket.StatusNormalClosure {
 				t.printLog(GQL_INTERNAL, "NORMAL CLOSURE")
 				// close event from websocket client, exiting...
 				return
 			}
-			if closeStatus != -1 {
-				t.printLog(GQL_INTERNAL, "CLOSE STATUS != -1")
-				t.ResetWithErr(err)
-				continue
-			}
+
+			t.printLog(GQL_INTERNAL, "READ JSON ERR", err)
+			t.ResetWithErr(err)
 			continue
 		}
 
@@ -313,7 +315,7 @@ func (t *Ws) run(inctx context.Context) {
 				if err := t.startOp(id, op); err != nil {
 					t.printLog(GQL_INTERNAL, "ACK: START OP FAILED")
 					_ = t.cancelOp(id)
-					t.errCh <- err
+					t.sendErr(err)
 				}
 			}
 			t.opsm.Unlock()
@@ -392,7 +394,7 @@ func (t *Ws) ResetWithErr(err error) {
 	t.printLog(GQL_INTERNAL, "RESET", err)
 
 	if err != nil {
-		t.errCh <- err
+		t.sendErr(err)
 	}
 
 	for id, op := range t.ops {

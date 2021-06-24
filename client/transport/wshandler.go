@@ -47,9 +47,14 @@ func (wh *WebsocketHandler) WriteJSON(v interface{}) error {
 }
 
 func (wh *WebsocketHandler) ReadJSON(v interface{}) error {
-	ctx, cancel := context.WithTimeout(wh.ctx, wh.timeout)
-	defer cancel()
-	return wsjson.Read(ctx, wh.Conn, v)
+	if wh.timeout > 0 {
+		ctx, cancel := context.WithTimeout(wh.ctx, wh.timeout)
+		defer cancel()
+
+		return wsjson.Read(ctx, wh.Conn, v)
+	}
+
+	return wsjson.Read(wh.ctx, wh.Conn, v)
 }
 
 func (wh *WebsocketHandler) Close() error {
@@ -58,6 +63,10 @@ func (wh *WebsocketHandler) Close() error {
 
 type WsDialOption func(o *websocket.DialOptions)
 
+// DefaultWebsocketConnProvider is the connections factory
+// A timeout of 0 means no timeout, reading will block until a message is received or the context is canceled
+// If your server supports the keepalive, set the timeout to something greater than the server keepalive
+// (for example 15s for a 10s keepalive)
 func DefaultWebsocketConnProvider(timeout time.Duration, optionfs ...WsDialOption) WebsocketConnProvider {
 	return func(ctx context.Context, URL string) (WebsocketConn, error) {
 		options := &websocket.DialOptions{
