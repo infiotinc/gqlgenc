@@ -164,6 +164,22 @@ type MyUploadFilesMap_UploadFilesMap struct {
 type MyUploadFilesMap struct {
 	UploadFilesMap MyUploadFilesMap_UploadFilesMap "json:\"uploadFilesMap\""
 }
+type Issue8_A struct {
+	Aa string "json:\"Aa\""
+}
+type Issue8_Foo1 struct {
+	A Issue8_A "json:\"a\""
+}
+type Issue8_Foo2 struct {
+	A Issue8_A "json:\"a\""
+}
+type Issue8_Issue8 struct {
+	Foo1 Issue8_Foo1 "json:\"foo1\""
+	Foo2 Issue8_Foo2 "json:\"foo2\""
+}
+type Issue8 struct {
+	Issue8 *Issue8_Issue8 "json:\"issue8\""
+}
 
 const GetRoomDocument = `query GetRoom ($name: String!) {
 	room(name: $name) {
@@ -454,6 +470,36 @@ func (Ξc *Client) MyUploadFilesMap(ctх context.Context, files UploadFilesMapIn
 	{
 		var data MyUploadFilesMap
 		res, err := Ξc.Client.Mutation(ctх, "MyUploadFilesMap", MyUploadFilesMapDocument, Ξvars, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
+	}
+}
+
+const Issue8Document = `query Issue8 {
+	issue8 {
+		foo1 {
+			a {
+				Aa
+			}
+		}
+		foo2 {
+			a {
+				Aa
+			}
+		}
+	}
+}
+`
+
+func (Ξc *Client) Issue8(ctх context.Context) (*Issue8, transport.OperationResponse, error) {
+	Ξvars := map[string]interface{}{}
+
+	{
+		var data Issue8
+		res, err := Ξc.Client.Query(ctх, "Issue8", Issue8Document, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}

@@ -81,3 +81,18 @@ mutation MyUploadFilesMap($files: UploadFilesMapInput!) {
         }
     }
 }
+
+query Issue8 {
+    issue8 {
+        foo1 {
+            a {
+                Aa
+            }
+        }
+        foo2 {
+            a {
+                Aa
+            }
+        }
+    }
+}

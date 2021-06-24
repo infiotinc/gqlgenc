@@ -305,3 +305,24 @@ func TestMutationUploadFilesMap(t *testing.T) {
 
 	assert.Equal(t, l, res.UploadFilesMap.Somefile.Size)
 }
+
+func TestIssue8(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td := uploadcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.Issue8(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "foo1", res.Issue8.Foo1.A.Aa)
+	assert.Equal(t, "foo2", res.Issue8.Foo2.A.Aa)
+}

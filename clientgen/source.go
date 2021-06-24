@@ -42,7 +42,7 @@ func (s *Source) Fragments() error {
 	for _, fragment := range s.queryDocument.Fragments {
 		name := templates.ToGo(fragment.Name)
 
-		_ = s.sourceGenerator.namedType(name, func() types.Type {
+		_ = s.sourceGenerator.namedType("", name, func() types.Type {
 			responseFields := s.sourceGenerator.NewResponseFields(name, &fragment.SelectionSet)
 
 			typ := s.sourceGenerator.genStruct("", name, responseFields)
@@ -130,7 +130,7 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 			Name:      name,
 		}
 
-		namedType := s.sourceGenerator.namedType(name, func() types.Type {
+		namedType := s.sourceGenerator.namedType("", name, func() types.Type {
 			responseFields := s.sourceGenerator.NewResponseFields(name, &operationResponse.SelectionSet)
 
 			typ := s.sourceGenerator.genStruct("", name, responseFields)

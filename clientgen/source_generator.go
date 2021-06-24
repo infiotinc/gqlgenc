@@ -121,24 +121,26 @@ L:
 	return responseFields
 }
 
-func (r *SourceGenerator) namedType(name string, gen func() types.Type) types.Type {
-	if gt := r.GetGenType(name); gt != nil {
+func (r *SourceGenerator) namedType(prefix, name string, gen func() types.Type) types.Type {
+	fullname := prefixedName(prefix, name)
+
+	if gt := r.GetGenType(fullname); gt != nil {
 		return gt.RefType
 	}
 
-	if r.cfg.Models.Exists(name) {
-		model := r.cfg.Models[name].Model[0]
-		fmt.Printf("%s is already declared: %v\n", name, model)
+	if r.cfg.Models.Exists(fullname) {
+		model := r.cfg.Models[fullname].Model[0]
+		fmt.Printf("%s is already declared: %v\n", fullname, model)
 
 		typ, err := r.binder.FindTypeFromName(model)
 		if err != nil {
-			panic(fmt.Errorf("cannot get type for %v: %w", name, err))
+			panic(fmt.Errorf("cannot get type for %v: %w", fullname, err))
 		}
 
 		return typ
 	} else {
 		r.cfg.Models.Add(
-			name,
+			fullname,
 			fmt.Sprintf("%s.%s", r.client.ImportPath(), name),
 		)
 
@@ -146,11 +148,16 @@ func (r *SourceGenerator) namedType(name string, gen func() types.Type) types.Ty
 	}
 }
 
-func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields ResponseFieldList) types.Type {
-	fullName := name
+func prefixedName(prefix, name string) string {
 	if prefix != "" {
-		fullName = prefix + "_" + fullName
+		return prefix + "_" + name
 	}
+
+	return name
+}
+
+func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields ResponseFieldList) types.Type {
+	fullname := prefixedName(prefix, name)
 
 	vars := make([]*types.Var, 0, len(fieldsResponseFields))
 	tags := make([]string, 0, len(fieldsResponseFields))
@@ -173,13 +180,13 @@ func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields Re
 	typ := types.NewStruct(vars, tags)
 
 	refType := types.NewNamed(
-		types.NewTypeName(0, r.client.Pkg(), fullName, nil),
+		types.NewTypeName(0, r.client.Pkg(), fullname, nil),
 		nil,
 		nil,
 	)
 
-	r.RegisterGenType(fullName, &Type{
-		Name:           fullName,
+	r.RegisterGenType(fullname, &Type{
+		Name:           fullname,
 		Type:           typ,
 		RefType:        refType,
 		UnmarshalTypes: unmarshalTypes,
@@ -201,8 +208,10 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 			// if a child field is fragment, this field type became fragment.
 			baseType = fieldsResponseFields[0].Type
 		case fieldsResponseFields.IsStructType():
-			typ := r.genStruct(prefix, templates.ToGo(selection.Name), fieldsResponseFields)
-			baseType = typ
+			name := templates.ToGo(selection.Name)
+			baseType = r.namedType(prefix, name, func() types.Type {
+				return r.genStruct(prefix, name, fieldsResponseFields)
+			})
 		default:
 			// ここにきたらバグ
 			// here is bug

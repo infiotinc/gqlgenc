@@ -34,6 +34,19 @@ type Image struct {
 
 func (Image) IsMedia() {}
 
+type Issue8Payload struct {
+	Foo1 *Issue8PayloadFoo `json:"foo1"`
+	Foo2 *Issue8PayloadFoo `json:"foo2"`
+}
+
+type Issue8PayloadFoo struct {
+	A *Issue8PayloadFooA `json:"a"`
+}
+
+type Issue8PayloadFooA struct {
+	Aa string `json:"Aa"`
+}
+
 type Message struct {
 	ID        string    `json:"id"`
 	Text      string    `json:"text"`

@@ -42,6 +42,20 @@ type Query {
     roomNonNull(name:String!): Chatroom!
     medias: [Media!]!
     books: [Book!]!
+    issue8: Issue8Payload
+}
+
+type Issue8Payload {
+    foo1: Issue8PayloadFoo!
+    foo2: Issue8PayloadFoo!
+}
+
+type Issue8PayloadFoo {
+    a: Issue8PayloadFooA!
+}
+
+type Issue8PayloadFooA {
+    Aa: String!
 }
 
 input PostCreateInput {

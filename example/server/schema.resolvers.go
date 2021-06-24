@@ -84,6 +84,13 @@ func (r *queryResolver) Books(ctx context.Context) ([]model.Book, error) {
 	}, nil
 }
 
+func (r *queryResolver) Issue8(ctx context.Context) (*model.Issue8Payload, error) {
+	return &model.Issue8Payload{
+		Foo1: &model.Issue8PayloadFoo{A: &model.Issue8PayloadFooA{Aa: "foo1"}},
+		Foo2: &model.Issue8PayloadFoo{A: &model.Issue8PayloadFooA{Aa: "foo2"}},
+	}, nil
+}
+
 func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error) {
 	ch := make(chan *model.Message)
 	debug, _ := strconv.ParseBool(os.Getenv("GQLGENC_WS_LOG"))

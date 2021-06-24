@@ -61,6 +61,19 @@ type ComplexityRoot struct {
 		Size func(childComplexity int) int
 	}
 
+	Issue8Payload struct {
+		Foo1 func(childComplexity int) int
+		Foo2 func(childComplexity int) int
+	}
+
+	Issue8PayloadFoo struct {
+		A func(childComplexity int) int
+	}
+
+	Issue8PayloadFooA struct {
+		Aa func(childComplexity int) int
+	}
+
 	Message struct {
 		CreatedAt func(childComplexity int) int
 		CreatedBy func(childComplexity int) int
@@ -77,6 +90,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Books       func(childComplexity int) int
+		Issue8      func(childComplexity int) int
 		Medias      func(childComplexity int) int
 		Room        func(childComplexity int, name string) int
 		RoomNonNull func(childComplexity int, name string) int
@@ -115,6 +129,7 @@ type QueryResolver interface {
 	RoomNonNull(ctx context.Context, name string) (*model.Chatroom, error)
 	Medias(ctx context.Context) ([]model.Media, error)
 	Books(ctx context.Context) ([]model.Book, error)
+	Issue8(ctx context.Context) (*model.Issue8Payload, error)
 }
 type SubscriptionResolver interface {
 	MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error)
@@ -169,6 +184,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Image.Size(childComplexity), true
+
+	case "Issue8Payload.foo1":
+		if e.complexity.Issue8Payload.Foo1 == nil {
+			break
+		}
+
+		return e.complexity.Issue8Payload.Foo1(childComplexity), true
+
+	case "Issue8Payload.foo2":
+		if e.complexity.Issue8Payload.Foo2 == nil {
+			break
+		}
+
+		return e.complexity.Issue8Payload.Foo2(childComplexity), true
+
+	case "Issue8PayloadFoo.a":
+		if e.complexity.Issue8PayloadFoo.A == nil {
+			break
+		}
+
+		return e.complexity.Issue8PayloadFoo.A(childComplexity), true
+
+	case "Issue8PayloadFooA.Aa":
+		if e.complexity.Issue8PayloadFooA.Aa == nil {
+			break
+		}
+
+		return e.complexity.Issue8PayloadFooA.Aa(childComplexity), true
 
 	case "Message.createdAt":
 		if e.complexity.Message.CreatedAt == nil {
@@ -252,6 +295,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Books(childComplexity), true
+
+	case "Query.issue8":
+		if e.complexity.Query.Issue8 == nil {
+			break
+		}
+
+		return e.complexity.Query.Issue8(childComplexity), true
 
 	case "Query.medias":
 		if e.complexity.Query.Medias == nil {
@@ -456,6 +506,20 @@ type Query {
     roomNonNull(name:String!): Chatroom!
     medias: [Media!]!
     books: [Book!]!
+    issue8: Issue8Payload
+}
+
+type Issue8Payload {
+    foo1: Issue8PayloadFoo!
+    foo2: Issue8PayloadFoo!
+}
+
+type Issue8PayloadFoo {
+    a: Issue8PayloadFooA!
+}
+
+type Issue8PayloadFooA {
+    Aa: String!
 }
 
 input PostCreateInput {
@@ -824,6 +888,146 @@ func (ec *executionContext) _Image_size(ctx context.Context, field graphql.Colle
 	res := resTmp.(int)
 	fc.Result = res
 	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Issue8Payload_foo1(ctx context.Context, field graphql.CollectedField, obj *model.Issue8Payload) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Issue8Payload",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Foo1, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Issue8PayloadFoo)
+	fc.Result = res
+	return ec.marshalNIssue8PayloadFoo2ᚖexampleᚋserverᚋmodelᚐIssue8PayloadFoo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Issue8Payload_foo2(ctx context.Context, field graphql.CollectedField, obj *model.Issue8Payload) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Issue8Payload",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Foo2, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Issue8PayloadFoo)
+	fc.Result = res
+	return ec.marshalNIssue8PayloadFoo2ᚖexampleᚋserverᚋmodelᚐIssue8PayloadFoo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Issue8PayloadFoo_a(ctx context.Context, field graphql.CollectedField, obj *model.Issue8PayloadFoo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Issue8PayloadFoo",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.A, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Issue8PayloadFooA)
+	fc.Result = res
+	return ec.marshalNIssue8PayloadFooA2ᚖexampleᚋserverᚋmodelᚐIssue8PayloadFooA(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Issue8PayloadFooA_Aa(ctx context.Context, field graphql.CollectedField, obj *model.Issue8PayloadFooA) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Issue8PayloadFooA",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Aa, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Message_id(ctx context.Context, field graphql.CollectedField, obj *model.Message) (ret graphql.Marshaler) {
@@ -1280,6 +1484,38 @@ func (ec *executionContext) _Query_books(ctx context.Context, field graphql.Coll
 	res := resTmp.([]model.Book)
 	fc.Result = res
 	return ec.marshalNBook2ᚕexampleᚋserverᚋmodelᚐBookᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_issue8(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Issue8(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Issue8Payload)
+	fc.Result = res
+	return ec.marshalOIssue8Payload2ᚖexampleᚋserverᚋmodelᚐIssue8Payload(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2852,6 +3088,92 @@ func (ec *executionContext) _Image(ctx context.Context, sel ast.SelectionSet, ob
 	return out
 }
 
+var issue8PayloadImplementors = []string{"Issue8Payload"}
+
+func (ec *executionContext) _Issue8Payload(ctx context.Context, sel ast.SelectionSet, obj *model.Issue8Payload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, issue8PayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Issue8Payload")
+		case "foo1":
+			out.Values[i] = ec._Issue8Payload_foo1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "foo2":
+			out.Values[i] = ec._Issue8Payload_foo2(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var issue8PayloadFooImplementors = []string{"Issue8PayloadFoo"}
+
+func (ec *executionContext) _Issue8PayloadFoo(ctx context.Context, sel ast.SelectionSet, obj *model.Issue8PayloadFoo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, issue8PayloadFooImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Issue8PayloadFoo")
+		case "a":
+			out.Values[i] = ec._Issue8PayloadFoo_a(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var issue8PayloadFooAImplementors = []string{"Issue8PayloadFooA"}
+
+func (ec *executionContext) _Issue8PayloadFooA(ctx context.Context, sel ast.SelectionSet, obj *model.Issue8PayloadFooA) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, issue8PayloadFooAImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Issue8PayloadFooA")
+		case "Aa":
+			out.Values[i] = ec._Issue8PayloadFooA_Aa(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var messageImplementors = []string{"Message"}
 
 func (ec *executionContext) _Message(ctx context.Context, sel ast.SelectionSet, obj *model.Message) graphql.Marshaler {
@@ -3003,6 +3325,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
+				return res
+			})
+		case "issue8":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_issue8(ctx, field)
 				return res
 			})
 		case "__type":
@@ -3502,6 +3835,26 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNIssue8PayloadFoo2ᚖexampleᚋserverᚋmodelᚐIssue8PayloadFoo(ctx context.Context, sel ast.SelectionSet, v *model.Issue8PayloadFoo) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Issue8PayloadFoo(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNIssue8PayloadFooA2ᚖexampleᚋserverᚋmodelᚐIssue8PayloadFooA(ctx context.Context, sel ast.SelectionSet, v *model.Issue8PayloadFooA) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Issue8PayloadFooA(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNMedia2exampleᚋserverᚋmodelᚐMedia(ctx context.Context, sel ast.SelectionSet, v model.Media) graphql.Marshaler {
@@ -4024,6 +4377,13 @@ func (ec *executionContext) marshalOChatroom2ᚖexampleᚋserverᚋmodelᚐChatr
 		return graphql.Null
 	}
 	return ec._Chatroom(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOIssue8Payload2ᚖexampleᚋserverᚋmodelᚐIssue8Payload(ctx context.Context, sel ast.SelectionSet, v *model.Issue8Payload) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Issue8Payload(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
