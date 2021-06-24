@@ -171,6 +171,6 @@ up := transport.NewUpload(someFile)
 _, _, err := gql.MyUploadFile(ctx, up)
 ```
 
-## Release
+## Acknowledgements
 
-    TAG=v0.0.x make tag
+This repo is based on the great work of [Yamashou/gqlgenc](https://github.com/Yamashou/gqlgenc) and [hasura/go-graphql-client](https://github.com/hasura/go-graphql-client)
