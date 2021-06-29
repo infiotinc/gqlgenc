@@ -3,6 +3,9 @@
 package model
 
 import (
+	"fmt"
+	"io"
+	"strconv"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -27,6 +30,26 @@ type ColoringBook struct {
 }
 
 func (ColoringBook) IsBook() {}
+
+type Cyclic1_1 struct {
+	ID    string     `json:"id"`
+	Child *Cyclic1_2 `json:"child"`
+}
+
+type Cyclic1_2 struct {
+	ID    string     `json:"id"`
+	Child *Cyclic1_1 `json:"child"`
+}
+
+type Cyclic2_1 struct {
+	ID    string     `json:"id"`
+	Child *Cyclic2_2 `json:"child"`
+}
+
+type Cyclic2_2 struct {
+	ID    string     `json:"id"`
+	Child *Cyclic2_1 `json:"child"`
+}
 
 type Image struct {
 	Size int `json:"size"`
@@ -58,6 +81,18 @@ type PostCreateInput struct {
 	Text string `json:"text"`
 }
 
+type SomeExtraType struct {
+	Child *SomeExtraTypeChild `json:"child"`
+}
+
+type SomeExtraTypeChild struct {
+	Child *SomeExtraTypeChildChild `json:"child"`
+}
+
+type SomeExtraTypeChildChild struct {
+	ID string `json:"id"`
+}
+
 type Textbook struct {
 	Title   string   `json:"title"`
 	Courses []string `json:"courses"`
@@ -82,3 +117,46 @@ type Video struct {
 }
 
 func (Video) IsMedia() {}
+
+type Episode string
+
+const (
+	EpisodeNewhope Episode = "NEWHOPE"
+	EpisodeEmpire  Episode = "EMPIRE"
+	EpisodeJedi    Episode = "JEDI"
+)
+
+var AllEpisode = []Episode{
+	EpisodeNewhope,
+	EpisodeEmpire,
+	EpisodeJedi,
+}
+
+func (e Episode) IsValid() bool {
+	switch e {
+	case EpisodeNewhope, EpisodeEmpire, EpisodeJedi:
+		return true
+	}
+	return false
+}
+
+func (e Episode) String() string {
+	return string(e)
+}
+
+func (e *Episode) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Episode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Episode", str)
+	}
+	return nil
+}
+
+func (e Episode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}

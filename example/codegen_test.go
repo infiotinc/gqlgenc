@@ -250,7 +250,7 @@ func TestMutationUploadFile(t *testing.T) {
 	up, l, rm := createUploadFile(t)
 	defer rm()
 
-	res, _, err := gql.MyUploadFile(ctx, up)
+	res, _, err := gql.UploadFile(ctx, up)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +273,7 @@ func TestMutationUploadFiles(t *testing.T) {
 	up, l, rm := createUploadFile(t)
 	defer rm()
 
-	res, _, err := gql.MyUploadFiles(ctx, []*transport.Upload{&up})
+	res, _, err := gql.UploadFiles(ctx, []*transport.Upload{&up})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestMutationUploadFilesMap(t *testing.T) {
 	up, l, rm := createUploadFile(t)
 	defer rm()
 
-	res, _, err := gql.MyUploadFilesMap(ctx, client.UploadFilesMapInput{
+	res, _, err := gql.UploadFilesMap(ctx, client.UploadFilesMapInput{
 		Somefile: up,
 	})
 	if err != nil {
@@ -323,6 +323,40 @@ func TestIssue8(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	assert.False(t, isPointer(res.Issue8.Foo1))
+	assert.True(t, isPointer(res.Issue8.Foo2))
+
 	assert.Equal(t, "foo1", res.Issue8.Foo1.A.Aa)
 	assert.Equal(t, "foo2", res.Issue8.Foo2.A.Aa)
+}
+
+func TestEnum(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td := uploadcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.GetEpisodes(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, client.EpisodeJEDI, res.Episodes[0])
+	assert.Equal(t, client.EpisodeNEWHOPE, res.Episodes[1])
+	assert.Equal(t, client.EpisodeEMPIRE, res.Episodes[2])
+}
+
+func TestGenExtraType(t *testing.T) {
+	t.Parallel()
+
+	// This should fail compiling if the types are missing
+	_ = client.SomeExtraType{}
+	_ = client.SomeExtraTypeChild{}
+	_ = client.SomeExtraTypeChildChild{}
 }

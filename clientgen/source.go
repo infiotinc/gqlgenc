@@ -36,6 +36,7 @@ type Type struct {
 	Type           types.Type
 	UnmarshalTypes map[string]TypeTarget
 	RefType        *types.Named
+	Consts         []*types.Const
 }
 
 func (s *Source) Fragments() error {
@@ -125,20 +126,18 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 	for _, operationResponse := range s.queryDocument.Operations {
 		name := getResponseStructName(operationResponse, s.generateConfig)
 
-		opres := &OperationResponse{
-			Operation: operationResponse,
-			Name:      name,
-		}
-
 		namedType := s.sourceGenerator.namedType("", name, func() types.Type {
 			responseFields := s.sourceGenerator.NewResponseFields(name, &operationResponse.SelectionSet)
 
 			typ := s.sourceGenerator.genStruct("", name, responseFields)
 			return typ
 		})
-		opres.Type = namedType
 
-		operationResponses = append(operationResponses, opres)
+		operationResponses = append(operationResponses, &OperationResponse{
+			Operation: operationResponse,
+			Name:      name,
+			Type:      namedType,
+		})
 	}
 
 	return operationResponses, nil

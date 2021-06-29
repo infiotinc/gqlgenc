@@ -2,10 +2,10 @@ package clientgen
 
 import (
 	"fmt"
-
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/plugin"
 	gqlgencConfig "github.com/infiotinc/gqlgenc/config"
+	"go/types"
 )
 
 var _ plugin.ConfigMutator = &Plugin{}
@@ -14,13 +14,15 @@ type Plugin struct {
 	queryFilePaths []string
 	Client         config.PackageConfig
 	GenerateConfig *gqlgencConfig.GenerateConfig
+	ExtraTypes     []string
 }
 
-func New(queryFilePaths []string, client config.PackageConfig, generateConfig *gqlgencConfig.GenerateConfig) *Plugin {
+func New(queryFilePaths []string, client gqlgencConfig.Client, generateConfig *gqlgencConfig.GenerateConfig) *Plugin {
 	return &Plugin{
 		queryFilePaths: queryFilePaths,
-		Client:         client,
+		Client:         client.PackageConfig,
 		GenerateConfig: generateConfig,
+		ExtraTypes:     client.ExtraTypes,
 	}
 }
 
@@ -53,6 +55,18 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 	sourceGenerator := NewSourceGenerator(cfg, p.Client)
 	source := NewSource(cfg.Schema, queryDocument, sourceGenerator, p.GenerateConfig)
 
+	for _, t := range p.ExtraTypes {
+		def := cfg.Schema.Types[t]
+
+		if def == nil {
+			panic("type " + t + " does not exist in schema")
+		}
+
+		_ = sourceGenerator.namedType("", def.Name, func() types.Type {
+			return sourceGenerator.GenFromDefinition(def.Name, def)
+		})
+	}
+
 	err = source.Fragments()
 	if err != nil {
 		return fmt.Errorf("generating fragment failed: %w", err)
@@ -65,10 +79,10 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 
 	operations := source.Operations(queryDocuments, operationResponses)
 
-	types := sourceGenerator.GenTypes()
+	genTypes := sourceGenerator.GenTypes()
 
 	generateClient := p.GenerateConfig.ShouldGenerateClient()
-	if err := RenderTemplate(cfg, types, operations, operationResponses, generateClient, p.Client); err != nil {
+	if err := RenderTemplate(cfg, genTypes, operations, generateClient, p.Client); err != nil {
 		return fmt.Errorf("template failed: %w", err)
 	}
 

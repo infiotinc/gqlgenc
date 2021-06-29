@@ -23,7 +23,16 @@
 {{/* > ctх (х in cyrillic alphabet) because it is user facing */}}
 
 {{- range $name, $element := .Types }}
+    // {{ .Name }}
 	type {{ .Name  }} {{ .Type | ref }}
+
+    {{- if .Consts }}
+    const (
+    {{- range $const := .Consts }}
+        {{$const.Name}} {{$const.Type|ref}} = {{$const.Val.ExactString}}
+    {{- end }}
+    )
+    {{- end }}
 
     {{- if .UnmarshalTypes }}
     func (t *{{ .Name }}) UnmarshalJSON(data []byte) error {

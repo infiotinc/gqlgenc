@@ -1,9 +1,9 @@
-model:
-  filename: ./client/gen_models.go
-  package: client
 client:
   filename: ./client/gen_client.go
   package: client
+  extra_types:
+    - SomeExtraType
+    - Cyclic2_1
 models:
   Int:
     model: github.com/99designs/gqlgen/graphql.Int64

@@ -158,10 +158,10 @@ func (h *Http) collectUploads(path string, in interface{}) map[string]Upload {
 		return rs
 	case reflect.Map:
 		rs := make(map[string]Upload)
-
-		for _, k := range v.MapKeys() {
-			p := fmt.Sprintf("%v.%v", path, k.Interface())
-			for fk, f := range h.collectUploads(p, v.MapIndex(k).Interface()) {
+		iter := v.MapRange()
+		for iter.Next() {
+			p := fmt.Sprintf("%v.%v", path, iter.Key().Interface())
+			for fk, f := range h.collectUploads(p, iter.Value().Interface()) {
 				rs[fk] = f
 			}
 		}
