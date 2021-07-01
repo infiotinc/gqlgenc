@@ -62,8 +62,8 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 			panic("type " + t + " does not exist in schema")
 		}
 
-		_ = sourceGenerator.namedType("", def.Name, func() types.Type {
-			return sourceGenerator.GenFromDefinition(def.Name, def)
+		_ = sourceGenerator.namedType(NewFieldPath(def.Name), func() types.Type {
+			return sourceGenerator.GenFromDefinition(def)
 		})
 	}
 

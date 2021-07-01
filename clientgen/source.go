@@ -3,7 +3,6 @@ package clientgen
 import (
 	"bytes"
 	"fmt"
-	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/infiotinc/gqlgenc/config"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/formatter"
@@ -37,16 +36,16 @@ type Type struct {
 	UnmarshalTypes map[string]TypeTarget
 	RefType        *types.Named
 	Consts         []*types.Const
+	Path           FieldPath
 }
 
 func (s *Source) Fragments() error {
 	for _, fragment := range s.queryDocument.Fragments {
-		name := templates.ToGo(fragment.Name)
+		path := NewFieldPath(fragment.Name)
+		_ = s.sourceGenerator.namedType(path, func() types.Type {
+			responseFields := s.sourceGenerator.NewResponseFields(path, &fragment.SelectionSet)
 
-		_ = s.sourceGenerator.namedType("", name, func() types.Type {
-			responseFields := s.sourceGenerator.NewResponseFields(name, &fragment.SelectionSet)
-
-			typ := s.sourceGenerator.genStruct("", name, responseFields)
+			typ := s.sourceGenerator.genStruct(path, responseFields)
 			return typ
 		})
 	}
@@ -126,10 +125,11 @@ func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 	for _, operationResponse := range s.queryDocument.Operations {
 		name := getResponseStructName(operationResponse, s.generateConfig)
 
-		namedType := s.sourceGenerator.namedType("", name, func() types.Type {
-			responseFields := s.sourceGenerator.NewResponseFields(name, &operationResponse.SelectionSet)
+		path := NewFieldPath(name)
+		namedType := s.sourceGenerator.namedType(path, func() types.Type {
+			responseFields := s.sourceGenerator.NewResponseFields(path, &operationResponse.SelectionSet)
 
-			typ := s.sourceGenerator.genStruct("", name, responseFields)
+			typ := s.sourceGenerator.genStruct(path, responseFields)
 			return typ
 		})
 

@@ -9,6 +9,29 @@ import (
 	"strings"
 )
 
+type FieldPath []string
+
+func NewFieldPath(ns ...string) FieldPath {
+	return ns
+}
+
+func (p FieldPath) With(n string) FieldPath {
+	return append(p, n)
+}
+
+func (p FieldPath) Name() string {
+	pn := make([]string, 0, len(p))
+	for _, n := range p {
+		pn = append(pn, templates.ToGo(n))
+	}
+
+	return strings.Join(pn, "_")
+}
+
+func (p FieldPath) String() string {
+	return strings.Join(p, ".")
+}
+
 type Argument struct {
 	Variable string
 	Type     types.Type
@@ -100,7 +123,7 @@ func NewSourceGenerator(cfg *config.Config, client config.PackageConfig) *Source
 	}
 }
 
-func (r *SourceGenerator) NewResponseFields(prefix string, selectionSet *ast.SelectionSet) ResponseFieldList {
+func (r *SourceGenerator) NewResponseFields(path FieldPath, selectionSet *ast.SelectionSet) ResponseFieldList {
 L:
 	for _, field := range *selectionSet {
 		switch field.(type) {
@@ -122,15 +145,15 @@ L:
 
 	responseFields := make(ResponseFieldList, 0, len(*selectionSet))
 	for _, selection := range *selectionSet {
-		rf := r.NewResponseField(prefix, selection)
+		rf := r.NewResponseField(path, selection)
 		responseFields = append(responseFields, rf)
 	}
 
 	return responseFields
 }
 
-func (r *SourceGenerator) namedType(prefix, name string, gen func() types.Type) types.Type {
-	fullname := prefixedName(prefix, name)
+func (r *SourceGenerator) namedType(path FieldPath, gen func() types.Type) types.Type {
+	fullname := path.Name()
 
 	if gt := r.GetGenType(fullname); gt != nil {
 		return gt.RefType
@@ -151,32 +174,19 @@ func (r *SourceGenerator) namedType(prefix, name string, gen func() types.Type) 
 
 		genTyp := &Type{
 			Name: name,
+			Path: path,
 		}
 
 		r.RegisterGenType(name, genTyp)
 
 		genTyp.Type = gen()
 
-		//r.cfg.Models.Add(
-		//	fullname,
-		//	fmt.Sprintf("%s.%s", pkg, name),
-		//)
-
 		return genTyp.RefType
 	}
 }
 
-func prefixedName(prefix, name string) string {
-	name = templates.ToGo(name)
-	if prefix != "" {
-		return prefix + "_" + name
-	}
-
-	return name
-}
-
-func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields ResponseFieldList) types.Type {
-	fullname := prefixedName(prefix, name)
+func (r *SourceGenerator) genStruct(path FieldPath, fieldsResponseFields ResponseFieldList) types.Type {
+	fullname := path.Name()
 
 	vars := make([]*types.Var, 0, len(fieldsResponseFields))
 	tags := make([]string, 0, len(fieldsResponseFields))
@@ -203,6 +213,7 @@ func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields Re
 	} else {
 		r.RegisterGenType(fullname, &Type{
 			Name:           fullname,
+			Path:           path,
 			Type:           typ,
 			UnmarshalTypes: unmarshalTypes,
 		})
@@ -211,21 +222,20 @@ func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields Re
 	return typ
 }
 
-func (r *SourceGenerator) AstTypeToType(prefix string, structName string, fields ResponseFieldList, typ *ast.Type) types.Type {
+func (r *SourceGenerator) AstTypeToType(path FieldPath, fields ResponseFieldList, typ *ast.Type) types.Type {
 	switch {
 	case fields.IsBasicType():
 		def := r.cfg.Schema.Types[typ.Name()]
 
-		return r.namedType("", def.Name, func() types.Type {
-			return r.GenFromDefinition(def.Name, def)
+		return r.namedType(NewFieldPath(def.Name), func() types.Type {
+			return r.GenFromDefinition(def)
 		})
 	case fields.IsFragment():
 		// if a child field is fragment, this field type became fragment.
 		return fields[0].Type
 	case fields.IsStructType():
-		name := templates.ToGo(structName)
-		return r.namedType(prefix, name, func() types.Type {
-			return r.genStruct(prefix, name, fields)
+		return r.namedType(path, func() types.Type {
+			return r.genStruct(path, fields)
 		})
 	default:
 		// ここにきたらバグ
@@ -234,12 +244,12 @@ func (r *SourceGenerator) AstTypeToType(prefix string, structName string, fields
 	}
 }
 
-func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selection) *ResponseField {
+func (r *SourceGenerator) NewResponseField(path FieldPath, selection ast.Selection) *ResponseField {
 	switch selection := selection.(type) {
 	case *ast.Field:
-		fieldsResponseFields := r.NewResponseFields(prefixedName(prefix, selection.Name), &selection.SelectionSet)
-
-		baseType := r.AstTypeToType(prefix, selection.Name, fieldsResponseFields, selection.Definition.Type)
+		fieldPath := path.With(selection.Name)
+		fieldsResponseFields := r.NewResponseFields(fieldPath, &selection.SelectionSet)
+		baseType := r.AstTypeToType(fieldPath, fieldsResponseFields, selection.Definition.Type)
 
 		// GraphQLの定義がオプショナルのはtypeのポインタ型が返り、配列の定義場合はポインタのスライスの型になって返ってきます
 		// return pointer type then optional type or slice pointer then slice type of definition in GraphQL.
@@ -255,10 +265,10 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 		}
 
 	case *ast.FragmentSpread:
-		fieldsResponseFields := r.NewResponseFields(prefix, &selection.Definition.SelectionSet)
+		fieldsResponseFields := r.NewResponseFields(path, &selection.Definition.SelectionSet)
 
 		name := selection.Definition.Name
-		typ := r.namedType("", name, func() types.Type {
+		typ := r.namedType(NewFieldPath(name), func() types.Type {
 			panic(fmt.Sprintf("fragment %v must already be generated", name))
 		})
 
@@ -271,8 +281,8 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 
 	case *ast.InlineFragment:
 		// InlineFragmentは子要素をそのままstructとしてもつので、ここで、構造体の型を作成します
-		fieldsResponseFields := r.NewResponseFields(prefix, &selection.SelectionSet)
-		typ := r.genStruct(prefix, selection.TypeCondition, fieldsResponseFields)
+		fieldsResponseFields := r.NewResponseFields(path, &selection.SelectionSet)
+		typ := r.genStruct(path.With(selection.TypeCondition), fieldsResponseFields)
 
 		return &ResponseField{
 			Name:             selection.TypeCondition,
@@ -289,8 +299,8 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 func (r *SourceGenerator) OperationArguments(variableDefinitions ast.VariableDefinitionList) []*Argument {
 	argumentTypes := make([]*Argument, 0, len(variableDefinitions))
 	for _, v := range variableDefinitions {
-		baseType := r.namedType("", v.Definition.Name, func() types.Type {
-			return r.GenFromDefinition(v.Definition.Name, v.Definition)
+		baseType := r.namedType(NewFieldPath(v.Definition.Name), func() types.Type {
+			return r.GenFromDefinition(v.Definition)
 		})
 
 		typ := r.binder.CopyModifiersFromAst(v.Type, baseType)
@@ -302,20 +312,4 @@ func (r *SourceGenerator) OperationArguments(variableDefinitions ast.VariableDef
 	}
 
 	return argumentTypes
-}
-
-// Typeの引数に渡すtypeNameは解析した結果からselectionなどから求めた型の名前を渡さなければいけない
-func (r *SourceGenerator) Type(typeName string) types.Type {
-	m, ok := r.cfg.Models[typeName]
-	if !ok {
-		panic("not model defined for " + typeName)
-	}
-
-	goType, err := r.binder.FindTypeFromName(m.Model[0])
-	if err != nil {
-		// 実装として正しいtypeNameを渡していれば必ず見つかるはずなのでpanic
-		panic(fmt.Sprintf("%+v", err))
-	}
-
-	return goType
 }

@@ -52,7 +52,7 @@ type GetRoom struct {
 	Room *GetRoom_Room "json:\"room\""
 }
 
-// GetRoom_Room
+// GetRoom.room
 type GetRoom_Room struct {
 	Name string "json:\"name\""
 }
@@ -62,7 +62,7 @@ type GetRoomNonNull struct {
 	RoomNonNull GetRoomNonNull_RoomNonNull "json:\"roomNonNull\""
 }
 
-// GetRoomNonNull_RoomNonNull
+// GetRoomNonNull.roomNonNull
 type GetRoomNonNull_RoomNonNull struct {
 	Name string "json:\"name\""
 }
@@ -77,17 +77,17 @@ type GetMedias struct {
 	Medias []GetMedias_Medias "json:\"medias\""
 }
 
-// GetMedias_Medias_Image
+// GetMedias.medias.Image
 type GetMedias_Medias_Image struct {
 	Size int64 "json:\"size\""
 }
 
-// GetMedias_Medias_Video
+// GetMedias.medias.Video
 type GetMedias_Medias_Video struct {
 	Duration int64 "json:\"duration\""
 }
 
-// GetMedias_Medias
+// GetMedias.medias
 type GetMedias_Medias struct {
 	Typename string "json:\"__typename\""
 	Image    *struct {
@@ -140,17 +140,17 @@ type GetBooks struct {
 	Books []GetBooks_Books "json:\"books\""
 }
 
-// GetBooks_Books_Textbook
+// GetBooks.books.Textbook
 type GetBooks_Books_Textbook struct {
 	Courses []string "json:\"courses\""
 }
 
-// GetBooks_Books_ColoringBook
+// GetBooks.books.ColoringBook
 type GetBooks_Books_ColoringBook struct {
 	Colors []string "json:\"colors\""
 }
 
-// GetBooks_Books
+// GetBooks.books
 type GetBooks_Books struct {
 	Typename string "json:\"__typename\""
 	Title    string "json:\"title\""
@@ -204,7 +204,7 @@ type SubscribeMessageAdded struct {
 	MessageAdded SubscribeMessageAdded_MessageAdded "json:\"messageAdded\""
 }
 
-// SubscribeMessageAdded_MessageAdded
+// SubscribeMessageAdded.messageAdded
 type SubscribeMessageAdded_MessageAdded struct {
 	ID string "json:\"id\""
 }
@@ -214,7 +214,7 @@ type CreatePost struct {
 	Post CreatePost_Post "json:\"post\""
 }
 
-// CreatePost_Post
+// CreatePost.post
 type CreatePost_Post struct {
 	ID   string "json:\"id\""
 	Text string "json:\"text\""
@@ -225,7 +225,7 @@ type UploadFile struct {
 	UploadFile UploadFile_UploadFile "json:\"uploadFile\""
 }
 
-// UploadFile_UploadFile
+// UploadFile.uploadFile
 type UploadFile_UploadFile struct {
 	Size int64 "json:\"size\""
 }
@@ -235,7 +235,7 @@ type UploadFiles struct {
 	UploadFiles []UploadFiles_UploadFiles "json:\"uploadFiles\""
 }
 
-// UploadFiles_UploadFiles
+// UploadFiles.uploadFiles
 type UploadFiles_UploadFiles struct {
 	Size int64 "json:\"size\""
 }
@@ -245,12 +245,12 @@ type UploadFilesMap struct {
 	UploadFilesMap UploadFilesMap_UploadFilesMap "json:\"uploadFilesMap\""
 }
 
-// UploadFilesMap_UploadFilesMap_Somefile
+// UploadFilesMap.uploadFilesMap.somefile
 type UploadFilesMap_UploadFilesMap_Somefile struct {
 	Size int64 "json:\"size\""
 }
 
-// UploadFilesMap_UploadFilesMap
+// UploadFilesMap.uploadFilesMap
 type UploadFilesMap_UploadFilesMap struct {
 	Somefile UploadFilesMap_UploadFilesMap_Somefile "json:\"somefile\""
 }
@@ -260,27 +260,27 @@ type Issue8 struct {
 	Issue8 *Issue8_Issue8 "json:\"issue8\""
 }
 
-// Issue8_Issue8_Foo1_A
+// Issue8.issue8.foo1.a
 type Issue8_Issue8_Foo1_A struct {
 	Aa string "json:\"Aa\""
 }
 
-// Issue8_Issue8_Foo1
+// Issue8.issue8.foo1
 type Issue8_Issue8_Foo1 struct {
 	A Issue8_Issue8_Foo1_A "json:\"a\""
 }
 
-// Issue8_Issue8_Foo2_A
+// Issue8.issue8.foo2.a
 type Issue8_Issue8_Foo2_A struct {
 	Aa string "json:\"Aa\""
 }
 
-// Issue8_Issue8_Foo2
+// Issue8.issue8.foo2
 type Issue8_Issue8_Foo2 struct {
 	A Issue8_Issue8_Foo2_A "json:\"a\""
 }
 
-// Issue8_Issue8
+// Issue8.issue8
 type Issue8_Issue8 struct {
 	Foo1 Issue8_Issue8_Foo1  "json:\"foo1\""
 	Foo2 *Issue8_Issue8_Foo2 "json:\"foo2\""
@@ -305,22 +305,22 @@ type Cyclic1 struct {
 	Cyclic *Cyclic1_Cyclic "json:\"cyclic\""
 }
 
-// Cyclic1_Cyclic_Child_Child_Child
+// Cyclic1.cyclic.child.child.child
 type Cyclic1_Cyclic_Child_Child_Child struct {
 	ID string "json:\"id\""
 }
 
-// Cyclic1_Cyclic_Child_Child
+// Cyclic1.cyclic.child.child
 type Cyclic1_Cyclic_Child_Child struct {
 	Child *Cyclic1_Cyclic_Child_Child_Child "json:\"child\""
 }
 
-// Cyclic1_Cyclic_Child
+// Cyclic1.cyclic.child
 type Cyclic1_Cyclic_Child struct {
 	Child *Cyclic1_Cyclic_Child_Child "json:\"child\""
 }
 
-// Cyclic1_Cyclic
+// Cyclic1.cyclic
 type Cyclic1_Cyclic struct {
 	Child *Cyclic1_Cyclic_Child "json:\"child\""
 }

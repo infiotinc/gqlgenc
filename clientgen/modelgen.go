@@ -8,7 +8,7 @@ import (
 	"go/types"
 )
 
-func (r *SourceGenerator) GenFromDefinition(typeName string, def *ast.Definition) types.Type {
+func (r *SourceGenerator) GenFromDefinition(def *ast.Definition) types.Type {
 	switch def.Kind {
 	case ast.Object, ast.InputObject:
 		vars := make([]*types.Var, 0, len(def.Fields))
@@ -17,8 +17,8 @@ func (r *SourceGenerator) GenFromDefinition(typeName string, def *ast.Definition
 		for _, field := range def.Fields {
 			fieldDef := r.cfg.Schema.Types[field.Type.Name()]
 
-			typ := r.namedType("", fieldDef.Name, func() types.Type {
-				return r.GenFromDefinition(fieldDef.Name, fieldDef)
+			typ := r.namedType(NewFieldPath(fieldDef.Name), func() types.Type {
+				return r.GenFromDefinition(fieldDef)
 			})
 
 			typ = r.binder.CopyModifiersFromAst(field.Type, typ)
@@ -38,7 +38,7 @@ func (r *SourceGenerator) GenFromDefinition(typeName string, def *ast.Definition
 
 		return types.NewStruct(vars, tags)
 	case ast.Enum:
-		genType := r.GetGenType(typeName)
+		genType := r.GetGenType(def.Name)
 
 		consts := make([]*types.Const, 0)
 		for _, v := range def.EnumValues {
