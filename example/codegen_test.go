@@ -347,9 +347,9 @@ func TestEnum(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, client.EpisodeJEDI, res.Episodes[0])
-	assert.Equal(t, client.EpisodeNEWHOPE, res.Episodes[1])
-	assert.Equal(t, client.EpisodeEMPIRE, res.Episodes[2])
+	assert.Equal(t, client.EpisodeJedi, res.Episodes[0])
+	assert.Equal(t, client.EpisodeNewhope, res.Episodes[1])
+	assert.Equal(t, client.EpisodeEmpire, res.Episodes[2])
 }
 
 func TestGenExtraType(t *testing.T) {

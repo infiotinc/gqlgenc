@@ -295,9 +295,9 @@ type GetEpisodes struct {
 type Episode string
 
 const (
-	EpisodeNEWHOPE Episode = "NEWHOPE"
-	EpisodeEMPIRE  Episode = "EMPIRE"
-	EpisodeJEDI    Episode = "JEDI"
+	EpisodeNewhope Episode = "NEWHOPE"
+	EpisodeEmpire  Episode = "EMPIRE"
+	EpisodeJedi    Episode = "JEDI"
 )
 
 // Cyclic1

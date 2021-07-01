@@ -45,7 +45,7 @@ func (r *SourceGenerator) GenFromDefinition(def *ast.Definition) types.Type {
 			consts = append(consts, types.NewConst(
 				0,
 				r.client.Pkg(),
-				fmt.Sprintf("%v%v", def.Name, v.Name),
+				fmt.Sprintf("%v%v", templates.ToGo(def.Name), templates.ToGo(v.Name)),
 				genType.RefType,
 				constant.MakeString(v.Name),
 			))
