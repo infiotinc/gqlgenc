@@ -89,13 +89,9 @@ type GetMedias_Medias_Video struct {
 
 // GetMedias.medias
 type GetMedias_Medias struct {
-	Typename string "json:\"__typename\""
-	Image    *struct {
-		Size int64 "json:\"size\""
-	} "json:\"-\""
-	Video *struct {
-		Duration int64 "json:\"duration\""
-	} "json:\"-\""
+	Typename string                  "json:\"__typename\""
+	Image    *GetMedias_Medias_Image "json:\"-\""
+	Video    *GetMedias_Medias_Video "json:\"-\""
 }
 
 func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
@@ -111,9 +107,7 @@ func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
 
 	switch r.Typename {
 	case "Image":
-		var a struct {
-			Size int64 "json:\"size\""
-		}
+		var a GetMedias_Medias_Image
 		err = json.Unmarshal(data, &a)
 		if err != nil {
 			return err
@@ -121,9 +115,7 @@ func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
 
 		t.Image = &a
 	case "Video":
-		var a struct {
-			Duration int64 "json:\"duration\""
-		}
+		var a GetMedias_Medias_Video
 		err = json.Unmarshal(data, &a)
 		if err != nil {
 			return err
@@ -152,14 +144,10 @@ type GetBooks_Books_ColoringBook struct {
 
 // GetBooks.books
 type GetBooks_Books struct {
-	Typename string "json:\"__typename\""
-	Title    string "json:\"title\""
-	Textbook *struct {
-		Courses []string "json:\"courses\""
-	} "json:\"-\""
-	ColoringBook *struct {
-		Colors []string "json:\"colors\""
-	} "json:\"-\""
+	Typename     string                       "json:\"__typename\""
+	Title        string                       "json:\"title\""
+	Textbook     *GetBooks_Books_Textbook     "json:\"-\""
+	ColoringBook *GetBooks_Books_ColoringBook "json:\"-\""
 }
 
 func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
@@ -175,9 +163,7 @@ func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
 
 	switch r.Typename {
 	case "ColoringBook":
-		var a struct {
-			Colors []string "json:\"colors\""
-		}
+		var a GetBooks_Books_ColoringBook
 		err = json.Unmarshal(data, &a)
 		if err != nil {
 			return err
@@ -185,9 +171,7 @@ func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
 
 		t.ColoringBook = &a
 	case "Textbook":
-		var a struct {
-			Courses []string "json:\"courses\""
-		}
+		var a GetBooks_Books_Textbook
 		err = json.Unmarshal(data, &a)
 		if err != nil {
 			return err

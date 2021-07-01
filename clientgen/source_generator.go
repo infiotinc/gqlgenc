@@ -206,20 +206,10 @@ func (r *SourceGenerator) genStruct(path FieldPath, fieldsResponseFields Respons
 		tags = append(tags, strings.Join(field.Tags, " "))
 	}
 
-	typ := types.NewStruct(vars, tags)
+	genType := r.GetGenType(fullname)
+	genType.UnmarshalTypes = unmarshalTypes
 
-	if genType := r.GetGenType(fullname); genType != nil {
-		genType.UnmarshalTypes = unmarshalTypes
-	} else {
-		r.RegisterGenType(fullname, &Type{
-			Name:           fullname,
-			Path:           path,
-			Type:           typ,
-			UnmarshalTypes: unmarshalTypes,
-		})
-	}
-
-	return typ
+	return types.NewStruct(vars, tags)
 }
 
 func (r *SourceGenerator) AstTypeToType(path FieldPath, fields ResponseFieldList, typ *ast.Type) types.Type {
@@ -281,9 +271,11 @@ func (r *SourceGenerator) NewResponseField(path FieldPath, selection ast.Selecti
 
 	case *ast.InlineFragment:
 		// InlineFragmentは子要素をそのままstructとしてもつので、ここで、構造体の型を作成します
+		path := path.With(selection.TypeCondition)
 		fieldsResponseFields := r.NewResponseFields(path, &selection.SelectionSet)
-		typ := r.genStruct(path.With(selection.TypeCondition), fieldsResponseFields)
-
+		typ := r.namedType(path, func() types.Type {
+			return r.genStruct(path, fieldsResponseFields)
+		})
 		return &ResponseField{
 			Name:             selection.TypeCondition,
 			Type:             typ,
