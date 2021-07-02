@@ -6,22 +6,31 @@ import (
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/vektah/gqlparser/v2/ast"
 	"go/types"
+	"math"
+	"sort"
 	"strings"
 )
 
-type FieldPath []string
+type FieldPath struct {
+	Kind ast.DefinitionKind
+	path []string
+}
 
-func NewFieldPath(ns ...string) FieldPath {
-	return ns
+func NewFieldPath(kind ast.DefinitionKind, name string) FieldPath {
+	return FieldPath{
+		Kind: kind,
+		path: []string{name},
+	}
 }
 
 func (p FieldPath) With(n string) FieldPath {
-	return append(p, n)
+	p.path = append(p.path, n)
+	return p
 }
 
 func (p FieldPath) Name() string {
-	pn := make([]string, 0, len(p))
-	for _, n := range p {
+	pn := make([]string, 0, len(p.path))
+	for _, n := range p.path {
 		pn = append(pn, templates.ToGo(n))
 	}
 
@@ -29,7 +38,7 @@ func (p FieldPath) Name() string {
 }
 
 func (p FieldPath) String() string {
-	return strings.Join(p, ".")
+	return strings.Join(p.path, ".")
 }
 
 type Argument struct {
@@ -112,6 +121,19 @@ func (r *SourceGenerator) GenTypes() []*Type {
 		typs = append(typs, gt.typ)
 	}
 
+	sort.SliceStable(typs, func(i, j int) bool {
+		pi := typs[i].Path.path
+		pj := typs[j].Path.path
+
+		for n := 0; n < int(math.Min(float64(len(pi)), float64(len(pj)))); n++ {
+			if pi[n] != pj[n] {
+				return pi[n] < pj[n]
+			}
+		}
+
+		return len(pi) < len(pj)
+	})
+
 	return typs
 }
 
@@ -185,7 +207,7 @@ func (r *SourceGenerator) namedType(path FieldPath, gen func() types.Type) types
 	}
 }
 
-func (r *SourceGenerator) genStruct(path FieldPath, fieldsResponseFields ResponseFieldList) types.Type {
+func (r *SourceGenerator) genFromResponseFields(path FieldPath, fieldsResponseFields ResponseFieldList) types.Type {
 	fullname := path.Name()
 
 	vars := make([]*types.Var, 0, len(fieldsResponseFields))
@@ -217,15 +239,15 @@ func (r *SourceGenerator) AstTypeToType(path FieldPath, fields ResponseFieldList
 	case fields.IsBasicType():
 		def := r.cfg.Schema.Types[typ.Name()]
 
-		return r.namedType(NewFieldPath(def.Name), func() types.Type {
-			return r.GenFromDefinition(def)
+		return r.namedType(NewFieldPath(def.Kind, def.Name), func() types.Type {
+			return r.genFromDefinition(def)
 		})
 	case fields.IsFragment():
 		// if a child field is fragment, this field type became fragment.
 		return fields[0].Type
 	case fields.IsStructType():
 		return r.namedType(path, func() types.Type {
-			return r.genStruct(path, fields)
+			return r.genFromResponseFields(path, fields)
 		})
 	default:
 		// ここにきたらバグ
@@ -258,7 +280,7 @@ func (r *SourceGenerator) NewResponseField(path FieldPath, selection ast.Selecti
 		fieldsResponseFields := r.NewResponseFields(path, &selection.Definition.SelectionSet)
 
 		name := selection.Definition.Name
-		typ := r.namedType(NewFieldPath(name), func() types.Type {
+		typ := r.namedType(NewFieldPath(selection.ObjectDefinition.Kind, name), func() types.Type {
 			panic(fmt.Sprintf("fragment %v must already be generated", name))
 		})
 
@@ -274,7 +296,7 @@ func (r *SourceGenerator) NewResponseField(path FieldPath, selection ast.Selecti
 		path := path.With(selection.TypeCondition)
 		fieldsResponseFields := r.NewResponseFields(path, &selection.SelectionSet)
 		typ := r.namedType(path, func() types.Type {
-			return r.genStruct(path, fieldsResponseFields)
+			return r.genFromResponseFields(path, fieldsResponseFields)
 		})
 		return &ResponseField{
 			Name:             selection.TypeCondition,
@@ -291,8 +313,8 @@ func (r *SourceGenerator) NewResponseField(path FieldPath, selection ast.Selecti
 func (r *SourceGenerator) OperationArguments(variableDefinitions ast.VariableDefinitionList) []*Argument {
 	argumentTypes := make([]*Argument, 0, len(variableDefinitions))
 	for _, v := range variableDefinitions {
-		baseType := r.namedType(NewFieldPath(v.Definition.Name), func() types.Type {
-			return r.GenFromDefinition(v.Definition)
+		baseType := r.namedType(NewFieldPath(v.Definition.Kind, v.Definition.Name), func() types.Type {
+			return r.genFromDefinition(v.Definition)
 		})
 
 		typ := r.binder.CopyModifiersFromAst(v.Type, baseType)

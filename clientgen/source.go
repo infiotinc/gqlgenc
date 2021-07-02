@@ -41,12 +41,28 @@ type Type struct {
 
 func (s *Source) Fragments() error {
 	for _, fragment := range s.queryDocument.Fragments {
-		path := NewFieldPath(fragment.Name)
+		path := NewFieldPath(fragment.Definition.Kind, fragment.Name)
 		_ = s.sourceGenerator.namedType(path, func() types.Type {
 			responseFields := s.sourceGenerator.NewResponseFields(path, &fragment.SelectionSet)
 
-			typ := s.sourceGenerator.genStruct(path, responseFields)
+			typ := s.sourceGenerator.genFromResponseFields(path, responseFields)
 			return typ
+		})
+	}
+
+	return nil
+}
+
+func (s *Source) ExtraTypes(extraTypes []string) error {
+	for _, t := range extraTypes {
+		def := s.sourceGenerator.cfg.Schema.Types[t]
+
+		if def == nil {
+			panic("type " + t + " does not exist in schema")
+		}
+
+		_ = s.sourceGenerator.namedType(NewFieldPath(def.Kind, def.Name), func() types.Type {
+			return s.sourceGenerator.genFromDefinition(def)
 		})
 	}
 
@@ -120,16 +136,18 @@ type OperationResponse struct {
 	Type      types.Type
 }
 
+const OperationKind ast.DefinitionKind = "OPERATION"
+
 func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 	operationResponses := make([]*OperationResponse, 0, len(s.queryDocument.Operations))
 	for _, operationResponse := range s.queryDocument.Operations {
 		name := getResponseStructName(operationResponse, s.generateConfig)
 
-		path := NewFieldPath(name)
+		path := NewFieldPath(OperationKind, name)
 		namedType := s.sourceGenerator.namedType(path, func() types.Type {
 			responseFields := s.sourceGenerator.NewResponseFields(path, &operationResponse.SelectionSet)
 
-			typ := s.sourceGenerator.genStruct(path, responseFields)
+			typ := s.sourceGenerator.genFromResponseFields(path, responseFields)
 			return typ
 		})
 

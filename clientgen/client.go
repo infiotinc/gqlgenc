@@ -2,22 +2,21 @@ package clientgen
 
 import (
 	"fmt"
-	"github.com/99designs/gqlgen/codegen/config"
+	gqlgenCfg "github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/plugin"
-	gqlgencConfig "github.com/infiotinc/gqlgenc/config"
-	"go/types"
+	"github.com/infiotinc/gqlgenc/config"
 )
 
 var _ plugin.ConfigMutator = &Plugin{}
 
 type Plugin struct {
 	queryFilePaths []string
-	Client         config.PackageConfig
-	GenerateConfig *gqlgencConfig.GenerateConfig
+	Client         gqlgenCfg.PackageConfig
+	GenerateConfig *config.GenerateConfig
 	ExtraTypes     []string
 }
 
-func New(queryFilePaths []string, client gqlgencConfig.Client, generateConfig *gqlgencConfig.GenerateConfig) *Plugin {
+func New(queryFilePaths []string, client config.Client, generateConfig *config.GenerateConfig) *Plugin {
 	return &Plugin{
 		queryFilePaths: queryFilePaths,
 		Client:         client.PackageConfig,
@@ -30,7 +29,7 @@ func (p *Plugin) Name() string {
 	return "clientgen"
 }
 
-func (p *Plugin) MutateConfig(cfg *config.Config) error {
+func (p *Plugin) MutateConfig(cfg *gqlgenCfg.Config) error {
 	querySources, err := LoadQuerySources(p.queryFilePaths)
 	if err != nil {
 		return fmt.Errorf("load query sources failed: %w", err)
@@ -55,16 +54,9 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 	sourceGenerator := NewSourceGenerator(cfg, p.Client)
 	source := NewSource(cfg.Schema, queryDocument, sourceGenerator, p.GenerateConfig)
 
-	for _, t := range p.ExtraTypes {
-		def := cfg.Schema.Types[t]
-
-		if def == nil {
-			panic("type " + t + " does not exist in schema")
-		}
-
-		_ = sourceGenerator.namedType(NewFieldPath(def.Name), func() types.Type {
-			return sourceGenerator.GenFromDefinition(def)
-		})
+	err = source.ExtraTypes(p.ExtraTypes)
+	if err != nil {
+		return fmt.Errorf("generating extra types failed: %w", err)
 	}
 
 	err = source.Fragments()

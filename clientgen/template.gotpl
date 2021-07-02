@@ -23,7 +23,7 @@
 {{/* > ctх (х in cyrillic alphabet) because it is user facing */}}
 
 {{- range $name, $element := .Types }}
-    // {{ .Path.String }}
+    // {{ .Path.Kind }}: {{ .Path.String }}
 	type {{ .Name }} {{ .Type | ref }}
 
     {{- if .Consts }}

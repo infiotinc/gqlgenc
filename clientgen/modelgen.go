@@ -8,7 +8,7 @@ import (
 	"go/types"
 )
 
-func (r *SourceGenerator) GenFromDefinition(def *ast.Definition) types.Type {
+func (r *SourceGenerator) genFromDefinition(def *ast.Definition) types.Type {
 	switch def.Kind {
 	case ast.Object, ast.InputObject:
 		vars := make([]*types.Var, 0, len(def.Fields))
@@ -17,8 +17,8 @@ func (r *SourceGenerator) GenFromDefinition(def *ast.Definition) types.Type {
 		for _, field := range def.Fields {
 			fieldDef := r.cfg.Schema.Types[field.Type.Name()]
 
-			typ := r.namedType(NewFieldPath(fieldDef.Name), func() types.Type {
-				return r.GenFromDefinition(fieldDef)
+			typ := r.namedType(NewFieldPath(fieldDef.Kind, fieldDef.Name), func() types.Type {
+				return r.genFromDefinition(fieldDef)
 			})
 
 			typ = r.binder.CopyModifiersFromAst(field.Type, typ)
