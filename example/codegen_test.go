@@ -352,6 +352,58 @@ func TestEnum(t *testing.T) {
 	assert.Equal(t, client.EpisodeEmpire, res.Episodes[2])
 }
 
+func TestInputAsMapReq(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td := uploadcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.AsMap(
+		ctx,
+		client.NewAsMapInput("str1", client.EpisodeJedi).WithOptEp(nil),
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "req: map[optEp:<nil> reqEp:JEDI reqStr:str1] opt: map[]", res.AsMap)
+}
+
+func TestInputAsMapOpt(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cli, td := uploadcli(ctx)
+	defer td()
+
+	gql := &client.Client{
+		Client: cli,
+	}
+
+	res, _, err := gql.AsMap(
+		ctx,
+		client.NewAsMapInput("str1", client.EpisodeJedi),
+		client.AsMapInputPtr(
+			client.NewAsMapInput("str2", client.EpisodeEmpire).
+				WithOptStr(client.StringPtr("str3")).
+				WithOptEp(client.EpisodePtr(client.EpisodeNewhope)),
+		),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, "req: map[reqEp:JEDI reqStr:str1] opt: map[optEp:NEWHOPE optStr:str3 reqEp:EMPIRE reqStr:str2]", res.AsMap)
+}
+
 func TestGenExtraType(t *testing.T) {
 	t.Parallel()
 

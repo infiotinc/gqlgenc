@@ -22,16 +22,25 @@
 {{/* > prefix with Ξ */}}
 {{/* > ctх (х in cyrillic alphabet) because it is user facing */}}
 
-{{- range $name, $element := .Types }}
+{{- range $_, $element := .Types }}
     // {{ .Path.Kind }}: {{ .Path.String }}
 	type {{ .Name }} {{ .Type | ref }}
 
-    {{- if .Consts }}
-    const (
-    {{- range $const := .Consts }}
-        {{$const.Name}} {{$const.Type|ref}} = {{$const.Val.ExactString}}
-    {{- end }}
-    )
+    {{- if .IsInputMap }}
+        func New{{ $element.Name }}({{- range $f := .MapReq }}{{$f.Name}} {{$f.Type|ref}},{{- end }}) {{ $element.Name }} {
+            return map[string]interface{}{
+            {{- range $f := .MapReq }}
+                "{{$f.Name}}": {{$f.Name}},
+            {{- end }}
+            }
+        }
+
+        {{- range $f := .MapOpt }}
+            func (t {{ $element.Name }}) With{{$f.Name|go}}(v {{$f.Type|ref}}) {{ $element.Name }} {
+                t["{{$f.Name}}"] = v
+                return t
+            }
+        {{- end }}
     {{- end }}
 
     {{- if .UnmarshalTypes }}
@@ -62,6 +71,21 @@
         return nil
     }
     {{- end }}
+
+    {{- if .Consts }}
+        const (
+        {{- range $const := .Consts }}
+            {{$const.Name}} {{$const.Type|ref}} = {{$const.Val.ExactString}}
+        {{- end }}
+        )
+    {{- end }}
+{{- end }}
+
+// Pointer helpers
+{{- range $_, $element := .PtrTypes }}
+    func {{ $element.Name|go }}Ptr(v {{ $element.Type|ref }}) *{{ $element.Type|ref }} {
+        return &v
+    }
 {{- end }}
 
 {{- range $op := .Operations }}

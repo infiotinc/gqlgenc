@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/codegen/templates"
+	config2 "github.com/infiotinc/gqlgenc/config"
 	"github.com/vektah/gqlparser/v2/ast"
 	"go/types"
 	"math"
@@ -78,8 +79,14 @@ type genType struct {
 	typ  *Type
 }
 
+type PtrType struct {
+	Name string
+	Type types.Type
+}
+
 type SourceGenerator struct {
 	cfg    *config.Config
+	ccfg   *config2.Config
 	binder *config.Binder
 	client config.PackageConfig
 
@@ -137,19 +144,99 @@ func (r *SourceGenerator) GenTypes() []*Type {
 	return typs
 }
 
-func NewSourceGenerator(cfg *config.Config, client config.PackageConfig) *SourceGenerator {
+func (r *SourceGenerator) isNamedPtrType(t types.Type) *PtrType {
+	if p, is := t.(*types.Pointer); is {
+		if n, is := p.Elem().(*types.Named); is {
+			return &PtrType{
+				Name: n.Obj().Name(),
+				Type: p.Elem(),
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *SourceGenerator) isBasicPtrType(t types.Type) *PtrType {
+	if p, is := t.(*types.Pointer); is {
+		if b, is := p.Elem().(*types.Basic); is {
+			return &PtrType{
+				Name: b.Name(),
+				Type: p.Elem(),
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *SourceGenerator) isPtrType(t types.Type) *PtrType {
+	if bt := r.isBasicPtrType(t); bt != nil {
+		return bt
+	}
+
+	if nt := r.isNamedPtrType(t); nt != nil {
+		return nt
+	}
+
+	return nil
+}
+
+func (r *SourceGenerator) PtrTypes(ops []*Operation) []PtrType {
+	typs := make([]PtrType, 0)
+	for _, op := range ops {
+		for _, a := range op.Args {
+			if pt := r.isPtrType(a.Type); pt != nil {
+				typs = append(typs, *pt)
+			}
+		}
+	}
+
+	for _, t := range r.genTypes {
+		if t.typ.IsInputMap() {
+			if pt := r.isPtrType(t.typ.Type); pt != nil {
+				typs = append(typs, *pt)
+			}
+
+			for _, f := range t.typ.MapOpt {
+				if pt := r.isPtrType(f.Type); pt != nil {
+					typs = append(typs, *pt)
+				}
+			}
+		}
+	}
+
+	sort.SliceStable(typs, func(i, j int) bool {
+		pi := typs[i].Name
+		pj := typs[j].Name
+
+		return len(pi) < len(pj)
+	})
+
+	return typs
+}
+
+func NewSourceGenerator(cfg *config.Config, ccfg *config2.Config, client config.PackageConfig) *SourceGenerator {
 	return &SourceGenerator{
 		cfg:    cfg,
+		ccfg:   ccfg,
 		binder: cfg.NewBinder(),
 		client: client,
 	}
 }
 
-func (r *SourceGenerator) NewResponseFields(path FieldPath, selectionSet *ast.SelectionSet) ResponseFieldList {
-L:
-	for _, field := range *selectionSet {
-		switch field.(type) {
+func (r *SourceGenerator) addTypenameIfInlineFragment(selectionSet *ast.SelectionSet) {
+	for _, s := range *selectionSet {
+		switch s.(type) {
 		case *ast.InlineFragment:
+			for _, s := range *selectionSet {
+				if field, ok := s.(*ast.Field); ok {
+					if field.Alias == "__typename" {
+						return // Already has it
+					}
+				}
+			}
+
 			*selectionSet = append(ast.SelectionSet{&ast.Field{
 				Name:  "__typename",
 				Alias: "__typename",
@@ -161,9 +248,13 @@ L:
 					},
 				},
 			}}, *selectionSet...)
-			break L
+			return
 		}
 	}
+}
+
+func (r *SourceGenerator) NewResponseFields(path FieldPath, selectionSet *ast.SelectionSet) ResponseFieldList {
+	r.addTypenameIfInlineFragment(selectionSet)
 
 	responseFields := make(ResponseFieldList, 0, len(*selectionSet))
 	for _, selection := range *selectionSet {
@@ -181,7 +272,7 @@ func (r *SourceGenerator) namedType(path FieldPath, gen func() types.Type) types
 		return gt.RefType
 	}
 
-	if r.cfg.Models.Exists(fullname) {
+	if r.cfg.Models.Exists(fullname) && len(r.cfg.Models[fullname].Model) > 0 {
 		model := r.cfg.Models[fullname].Model[0]
 		fmt.Printf("%s is already declared: %v\n", fullname, model)
 
@@ -192,14 +283,12 @@ func (r *SourceGenerator) namedType(path FieldPath, gen func() types.Type) types
 
 		return typ
 	} else {
-		name := fullname
-
 		genTyp := &Type{
-			Name: name,
+			Name: fullname,
 			Path: path,
 		}
 
-		r.RegisterGenType(name, genTyp)
+		r.RegisterGenType(fullname, genTyp)
 
 		genTyp.Type = gen()
 

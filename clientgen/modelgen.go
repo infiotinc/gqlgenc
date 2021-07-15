@@ -10,7 +10,39 @@ import (
 
 func (r *SourceGenerator) genFromDefinition(def *ast.Definition) types.Type {
 	switch def.Kind {
-	case ast.Object, ast.InputObject:
+	case ast.InputObject:
+		if r.ccfg.Client.InputAsMap || r.ccfg.Models[def.Name].AsMap {
+			genType := r.GetGenType(def.Name)
+
+			for _, field := range def.Fields {
+				fieldDef := r.cfg.Schema.Types[field.Type.Name()]
+
+				typ := r.namedType(NewFieldPath(fieldDef.Kind, fieldDef.Name), func() types.Type {
+					return r.genFromDefinition(fieldDef)
+				})
+
+				typ = r.binder.CopyModifiersFromAst(field.Type, typ)
+
+				f := MapField{
+					Name: field.Name,
+					Type: typ,
+				}
+
+				if field.Type.NonNull {
+					genType.MapReq = append(genType.MapReq, f)
+				} else {
+					genType.MapOpt = append(genType.MapOpt, f)
+				}
+			}
+
+			return types.NewMap(
+				types.Typ[types.String],
+				types.NewInterfaceType(nil, nil),
+			)
+		}
+
+		fallthrough // Not input as map, treat as object
+	case ast.Object:
 		vars := make([]*types.Var, 0, len(def.Fields))
 		tags := make([]string, 0, len(def.Fields))
 
@@ -37,6 +69,7 @@ func (r *SourceGenerator) genFromDefinition(def *ast.Definition) types.Type {
 		}
 
 		return types.NewStruct(vars, tags)
+
 	case ast.Enum:
 		genType := r.GetGenType(def.Name)
 

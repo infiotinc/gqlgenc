@@ -45,6 +45,7 @@ type Query {
     issue8: Issue8Payload
     cyclic: Cyclic1_1
     episodes: [Episode!]!
+    asMap(req: AsMapInput!, opt: AsMapInput): String!
 }
 
 type Issue8Payload {
@@ -125,4 +126,12 @@ type Cyclic2_1 {
 type Cyclic2_2 {
     id: String!
     child: Cyclic2_1
+}
+
+input AsMapInput {
+    reqStr: String!
+    optStr: String
+
+    reqEp: Episode!
+    optEp: Episode
 }

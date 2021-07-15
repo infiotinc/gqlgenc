@@ -15,6 +15,29 @@ type Client struct {
 	Client *client.Client
 }
 
+// OPERATION: AsMap
+type AsMap struct {
+	AsMap string "json:\"asMap\""
+}
+
+// INPUT_OBJECT: AsMapInput
+type AsMapInput map[string]interface{}
+
+func NewAsMapInput(reqStr string, reqEp Episode) AsMapInput {
+	return map[string]interface{}{
+		"reqStr": reqStr,
+		"reqEp":  reqEp,
+	}
+}
+func (t AsMapInput) WithOptStr(v *string) AsMapInput {
+	t["optStr"] = v
+	return t
+}
+func (t AsMapInput) WithOptEp(v *Episode) AsMapInput {
+	t["optEp"] = v
+	return t
+}
+
 // OPERATION: CreatePost
 type CreatePost struct {
 	Post CreatePost_Post "json:\"post\""
@@ -317,6 +340,17 @@ type UploadFilesMap_UploadFilesMap_Somefile struct {
 // INPUT_OBJECT: UploadFilesMapInput
 type UploadFilesMapInput struct {
 	Somefile transport.Upload "json:\"somefile\""
+}
+
+// Pointer helpers
+func StringPtr(v string) *string {
+	return &v
+}
+func EpisodePtr(v Episode) *Episode {
+	return &v
+}
+func AsMapInputPtr(v AsMapInput) *AsMapInput {
+	return &v
 }
 
 const GetRoomDocument = `query GetRoom ($name: String!) {
@@ -684,6 +718,28 @@ func (Ξc *Client) Cyclic1(ctх context.Context) (*Cyclic1, transport.OperationR
 	{
 		var data Cyclic1
 		res, err := Ξc.Client.Query(ctх, "Cyclic1", Cyclic1Document, Ξvars, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
+	}
+}
+
+const AsMapDocument = `query AsMap ($req: AsMapInput!, $opt: AsMapInput) {
+	asMap(req: $req, opt: $opt)
+}
+`
+
+func (Ξc *Client) AsMap(ctх context.Context, req AsMapInput, opt *AsMapInput) (*AsMap, transport.OperationResponse, error) {
+	Ξvars := map[string]interface{}{
+		"req": req,
+		"opt": opt,
+	}
+
+	{
+		var data AsMap
+		res, err := Ξc.Client.Query(ctх, "AsMap", AsMapDocument, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}

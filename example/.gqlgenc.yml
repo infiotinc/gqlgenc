@@ -13,6 +13,8 @@ models:
     model: example/somelib.CustomRoom
   Upload:
     model: github.com/infiotinc/gqlgenc/client/transport.Upload
+  AsMapInput:
+    as_map: true
 schema:
   - schema.graphql
 query:

@@ -103,6 +103,10 @@ func (r *queryResolver) Episodes(ctx context.Context) ([]model.Episode, error) {
 	}, nil
 }
 
+func (r *queryResolver) AsMap(ctx context.Context, req map[string]interface{}, opt map[string]interface{}) (string, error) {
+	return fmt.Sprintf("req: %+v opt: %+v", req, opt), nil
+}
+
 func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error) {
 	ch := make(chan *model.Message)
 	debug, _ := strconv.ParseBool(os.Getenv("GQLGENC_WS_LOG"))

@@ -168,6 +168,10 @@ func (h *Http) collectUploads(path string, in interface{}) map[string]Upload {
 		return rs
 
 	case reflect.Ptr:
+		if v.IsNil() {
+			return nil
+		}
+
 		return h.collectUploads(path, v.Elem().Interface())
 	}
 
