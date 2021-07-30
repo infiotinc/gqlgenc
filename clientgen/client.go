@@ -13,15 +13,15 @@ type Plugin struct {
 	queryFilePaths []string
 	Client         gqlgenCfg.PackageConfig
 	GenerateConfig *config.GenerateConfig
-	ExtraTypes     []string
+	Cfg            *config.Config
 }
 
-func New(queryFilePaths []string, client config.Client, generateConfig *config.GenerateConfig) *Plugin {
+func New(cfg *config.Config) *Plugin {
 	return &Plugin{
-		queryFilePaths: queryFilePaths,
-		Client:         client.PackageConfig,
-		GenerateConfig: generateConfig,
-		ExtraTypes:     client.ExtraTypes,
+		queryFilePaths: cfg.Query,
+		Client:         cfg.Client.PackageConfig,
+		GenerateConfig: cfg.Generate,
+		Cfg:            cfg,
 	}
 }
 
@@ -51,10 +51,10 @@ func (p *Plugin) MutateConfig(cfg *gqlgenCfg.Config) error {
 
 	// 3. テンプレートと情報ソースを元にコード生成
 	// 3. Generate code from template and document source
-	sourceGenerator := NewSourceGenerator(cfg, p.Client)
+	sourceGenerator := NewSourceGenerator(cfg, p.Cfg, p.Client)
 	source := NewSource(cfg.Schema, queryDocument, sourceGenerator, p.GenerateConfig)
 
-	err = source.ExtraTypes(p.ExtraTypes)
+	err = source.ExtraTypes()
 	if err != nil {
 		return fmt.Errorf("generating extra types failed: %w", err)
 	}
@@ -72,9 +72,10 @@ func (p *Plugin) MutateConfig(cfg *gqlgenCfg.Config) error {
 	operations := source.Operations(queryDocuments, operationResponses)
 
 	genTypes := sourceGenerator.GenTypes()
+	ptrTypes := sourceGenerator.PtrTypes(operations)
 
 	generateClient := p.GenerateConfig.ShouldGenerateClient()
-	if err := RenderTemplate(cfg, genTypes, operations, generateClient, p.Client); err != nil {
+	if err := RenderTemplate(cfg, genTypes, ptrTypes, operations, generateClient, p.Client); err != nil {
 		return fmt.Errorf("template failed: %w", err)
 	}
 

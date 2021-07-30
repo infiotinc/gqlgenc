@@ -109,6 +109,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
+		AsMap       func(childComplexity int, req map[string]interface{}, opt map[string]interface{}) int
 		Books       func(childComplexity int) int
 		Cyclic      func(childComplexity int) int
 		Episodes    func(childComplexity int) int
@@ -166,6 +167,7 @@ type QueryResolver interface {
 	Issue8(ctx context.Context) (*model.Issue8Payload, error)
 	Cyclic(ctx context.Context) (*model.Cyclic1_1, error)
 	Episodes(ctx context.Context) ([]model.Episode, error)
+	AsMap(ctx context.Context, req map[string]interface{}, opt map[string]interface{}) (string, error)
 }
 type SubscriptionResolver interface {
 	MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error)
@@ -380,6 +382,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UploadFilesMap(childComplexity, args["files"].(model.UploadFilesMapInput)), true
+
+	case "Query.asMap":
+		if e.complexity.Query.AsMap == nil {
+			break
+		}
+
+		args, err := ec.field_Query_asMap_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.AsMap(childComplexity, args["req"].(map[string]interface{}), args["opt"].(map[string]interface{})), true
 
 	case "Query.books":
 		if e.complexity.Query.Books == nil {
@@ -636,6 +650,7 @@ type Query {
     issue8: Issue8Payload
     cyclic: Cyclic1_1
     episodes: [Episode!]!
+    asMap(req: AsMapInput!, opt: AsMapInput): String!
 }
 
 type Issue8Payload {
@@ -717,6 +732,14 @@ type Cyclic2_2 {
     id: String!
     child: Cyclic2_1
 }
+
+input AsMapInput {
+    reqStr: String!
+    optStr: String
+
+    reqEp: Episode!
+    optEp: Episode
+}
 `, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -797,6 +820,30 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_asMap_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 map[string]interface{}
+	if tmp, ok := rawArgs["req"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("req"))
+		arg0, err = ec.unmarshalNAsMapInput2map(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["req"] = arg0
+	var arg1 map[string]interface{}
+	if tmp, ok := rawArgs["opt"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("opt"))
+		arg1, err = ec.unmarshalOAsMapInput2map(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["opt"] = arg1
 	return args, nil
 }
 
@@ -2016,6 +2063,48 @@ func (ec *executionContext) _Query_episodes(ctx context.Context, field graphql.C
 	res := resTmp.([]model.Episode)
 	fc.Result = res
 	return ec.marshalNEpisode2ᚕexampleᚋserverᚋmodelᚐEpisodeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_asMap(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_asMap_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().AsMap(rctx, args["req"].(map[string]interface{}), args["opt"].(map[string]interface{}))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -4081,6 +4170,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
+		case "asMap":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_asMap(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "__type":
 			out.Values[i] = ec._Query___type(ctx, field)
 		case "__schema":
@@ -4554,6 +4657,10 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
+
+func (ec *executionContext) unmarshalNAsMapInput2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
+	return v.(map[string]interface{}), nil
+}
 
 func (ec *executionContext) marshalNBook2exampleᚋserverᚋmodelᚐBook(ctx context.Context, sel ast.SelectionSet, v model.Book) graphql.Marshaler {
 	if v == nil {
@@ -5260,6 +5367,13 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
+func (ec *executionContext) unmarshalOAsMapInput2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
+	if v == nil {
+		return nil, nil
+	}
+	return v.(map[string]interface{}), nil
+}
+
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -5317,6 +5431,22 @@ func (ec *executionContext) marshalOCyclic2_22ᚖexampleᚋserverᚋmodelᚐCycl
 		return graphql.Null
 	}
 	return ec._Cyclic2_2(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOEpisode2ᚖexampleᚋserverᚋmodelᚐEpisode(ctx context.Context, v interface{}) (*model.Episode, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.Episode)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOEpisode2ᚖexampleᚋserverᚋmodelᚐEpisode(ctx context.Context, sel ast.SelectionSet, v *model.Episode) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) marshalOIssue8Payload2ᚖexampleᚋserverᚋmodelᚐIssue8Payload(ctx context.Context, sel ast.SelectionSet, v *model.Issue8Payload) graphql.Marshaler {

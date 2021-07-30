@@ -112,3 +112,7 @@ query Cyclic1 {
        }
     }
 }
+
+query AsMap($req: AsMapInput!, $opt: AsMapInput) {
+    asMap(req: $req, opt: $opt)
+}

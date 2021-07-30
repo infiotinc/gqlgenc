@@ -26,14 +26,23 @@ type Client struct {
 	config.PackageConfig `yaml:",inline"`
 
 	ExtraTypes []string `yaml:"extra_types,omitempty"`
+	InputAsMap bool     `yaml:"input_as_map"`
 }
+
+type TypeMapEntry struct {
+	config.TypeMapEntry `yaml:",inline"`
+
+	AsMap bool `yaml:"as_map,omitempty"`
+}
+
+type TypeMap map[string]TypeMapEntry
 
 // Config extends the gqlgen basic config
 // and represents the config file
 type Config struct {
 	SchemaFilename StringList      `yaml:"schema,omitempty"`
 	Client         Client          `yaml:"client,omitempty"`
-	Models         config.TypeMap  `yaml:"models,omitempty"`
+	Models         TypeMap         `yaml:"models,omitempty"`
 	Endpoint       *EndPointConfig `yaml:"endpoint,omitempty"`
 	Generate       *GenerateConfig `yaml:"generate,omitempty"`
 
@@ -187,10 +196,12 @@ func LoadConfig(filename string) (*Config, error) {
 
 	models := make(config.TypeMap)
 	if cfg.Models != nil {
-		models = cfg.Models
+		for k, v := range cfg.Models {
+			models[k] = v.TypeMapEntry
+		}
 	}
 
-	sources := []*ast.Source{}
+	sources := make([]*ast.Source, 0)
 
 	for _, filename := range cfg.SchemaFilename {
 		filename = filepath.ToSlash(filename)

@@ -138,6 +138,23 @@ gql := &graph.Client{
 gql.GetRoom(...)
 ```
 
+## Input as `map`
+
+In Go, working with JSON and nullity can be tricky. The recommended way to deal with such case is through maps. You can ask gqlgenc to generate such maps with helpers through config:
+
+Globally:
+```yaml
+client:
+  input_as_map: true
+```
+
+Per model:
+```yaml
+models:
+  SomeInput:
+    as_map: true
+```
+
 ## Extensions
 
 ### APQ

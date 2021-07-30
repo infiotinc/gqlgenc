@@ -30,13 +30,25 @@ type TypeTarget struct {
 	Name string
 }
 
+type MapField struct {
+	Name string
+	Type types.Type
+}
+
 type Type struct {
 	Name           string
+	Path           FieldPath
 	Type           types.Type
 	UnmarshalTypes map[string]TypeTarget
 	RefType        *types.Named
 	Consts         []*types.Const
-	Path           FieldPath
+
+	MapReq []MapField
+	MapOpt []MapField
+}
+
+func (t Type) IsInputMap() bool {
+	return len(t.MapReq) > 0 || len(t.MapOpt) > 0
 }
 
 func (s *Source) Fragments() error {
@@ -53,8 +65,8 @@ func (s *Source) Fragments() error {
 	return nil
 }
 
-func (s *Source) ExtraTypes(extraTypes []string) error {
-	for _, t := range extraTypes {
+func (s *Source) ExtraTypes() error {
+	for _, t := range s.sourceGenerator.ccfg.Client.ExtraTypes {
 		def := s.sourceGenerator.cfg.Schema.Types[t]
 
 		if def == nil {
