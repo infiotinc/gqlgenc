@@ -267,6 +267,26 @@ type Issue8_Issue8_Foo2_A struct {
 	Aa string "json:\"Aa\""
 }
 
+// OPERATION: OptValue1
+type OptValue1 struct {
+	OptValue1 *bool "json:\"optValue1\""
+}
+
+// OPERATION: OptValue2
+type OptValue2 struct {
+	OptValue2 *bool "json:\"optValue2\""
+}
+
+// INPUT_OBJECT: OptionalValue1
+type OptionalValue1 struct {
+	Value *Value1 "json:\"value\""
+}
+
+// INPUT_OBJECT: OptionalValue2
+type OptionalValue2 struct {
+	Value *Value2 "json:\"value\""
+}
+
 // INPUT_OBJECT: PostCreateInput
 type PostCreateInput struct {
 	Text string "json:\"text\""
@@ -343,13 +363,22 @@ type UploadFilesMapInput struct {
 }
 
 // Pointer helpers
-func StringPtr(v string) *string {
+func AsMapInputPtr(v AsMapInput) *AsMapInput {
 	return &v
 }
 func EpisodePtr(v Episode) *Episode {
 	return &v
 }
-func AsMapInputPtr(v AsMapInput) *AsMapInput {
+func OptionalValue2Ptr(v OptionalValue2) *OptionalValue2 {
+	return &v
+}
+func Value1Ptr(v Value1) *Value1 {
+	return &v
+}
+func Value2Ptr(v Value2) *Value2 {
+	return &v
+}
+func StringPtr(v string) *string {
 	return &v
 }
 
@@ -740,6 +769,48 @@ func (Ξc *Client) AsMap(ctх context.Context, req AsMapInput, opt *AsMapInput) 
 	{
 		var data AsMap
 		res, err := Ξc.Client.Query(ctх, "AsMap", AsMapDocument, Ξvars, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
+	}
+}
+
+const OptValue1Document = `query OptValue1 ($v: OptionalValue1!) {
+	optValue1(req: $v)
+}
+`
+
+func (Ξc *Client) OptValue1(ctх context.Context, v OptionalValue1) (*OptValue1, transport.OperationResponse, error) {
+	Ξvars := map[string]interface{}{
+		"v": v,
+	}
+
+	{
+		var data OptValue1
+		res, err := Ξc.Client.Query(ctх, "OptValue1", OptValue1Document, Ξvars, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
+	}
+}
+
+const OptValue2Document = `query OptValue2 ($v: OptionalValue2) {
+	optValue2(opt: $v)
+}
+`
+
+func (Ξc *Client) OptValue2(ctх context.Context, v *OptionalValue2) (*OptValue2, transport.OperationResponse, error) {
+	Ξvars := map[string]interface{}{
+		"v": v,
+	}
+
+	{
+		var data OptValue2
+		res, err := Ξc.Client.Query(ctх, "OptValue2", OptValue2Document, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}

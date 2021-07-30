@@ -37,6 +37,16 @@ type Message {
     createdAt: Time!
 }
 
+scalar Value1
+input OptionalValue1 {
+    value: Value1
+}
+
+scalar Value2
+input OptionalValue2 {
+    value: Value2
+}
+
 type Query {
     room(name:String!): Chatroom
     roomNonNull(name:String!): Chatroom!
@@ -46,6 +56,8 @@ type Query {
     cyclic: Cyclic1_1
     episodes: [Episode!]!
     asMap(req: AsMapInput!, opt: AsMapInput): String!
+    optValue1(req: OptionalValue1!): Boolean
+    optValue2(opt: OptionalValue2): Boolean
 }
 
 type Issue8Payload {

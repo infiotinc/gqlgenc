@@ -72,7 +72,7 @@ func (p *Plugin) MutateConfig(cfg *gqlgenCfg.Config) error {
 	operations := source.Operations(queryDocuments, operationResponses)
 
 	genTypes := sourceGenerator.GenTypes()
-	ptrTypes := sourceGenerator.PtrTypes(operations)
+	ptrTypes := sourceGenerator.PtrTypes()
 
 	generateClient := p.GenerateConfig.ShouldGenerateClient()
 	if err := RenderTemplate(cfg, genTypes, ptrTypes, operations, generateClient, p.Client); err != nil {

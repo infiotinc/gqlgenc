@@ -91,6 +91,7 @@ type SourceGenerator struct {
 	client config.PackageConfig
 
 	genTypes []genType
+	ptrTypes map[types.Type]PtrType
 }
 
 func (r *SourceGenerator) RegisterGenType(name string, typ *Type) {
@@ -144,73 +145,17 @@ func (r *SourceGenerator) GenTypes() []*Type {
 	return typs
 }
 
-func (r *SourceGenerator) isNamedPtrType(t types.Type) *PtrType {
-	if p, is := t.(*types.Pointer); is {
-		if n, is := p.Elem().(*types.Named); is {
-			return &PtrType{
-				Name: n.Obj().Name(),
-				Type: p.Elem(),
-			}
-		}
-	}
-
-	return nil
-}
-
-func (r *SourceGenerator) isBasicPtrType(t types.Type) *PtrType {
-	if p, is := t.(*types.Pointer); is {
-		if b, is := p.Elem().(*types.Basic); is {
-			return &PtrType{
-				Name: b.Name(),
-				Type: p.Elem(),
-			}
-		}
-	}
-
-	return nil
-}
-
-func (r *SourceGenerator) isPtrType(t types.Type) *PtrType {
-	if bt := r.isBasicPtrType(t); bt != nil {
-		return bt
-	}
-
-	if nt := r.isNamedPtrType(t); nt != nil {
-		return nt
-	}
-
-	return nil
-}
-
-func (r *SourceGenerator) PtrTypes(ops []*Operation) []PtrType {
+func (r *SourceGenerator) PtrTypes() []PtrType {
 	typs := make([]PtrType, 0)
-	for _, op := range ops {
-		for _, a := range op.Args {
-			if pt := r.isPtrType(a.Type); pt != nil {
-				typs = append(typs, *pt)
-			}
-		}
-	}
-
-	for _, t := range r.genTypes {
-		if t.typ.IsInputMap() {
-			if pt := r.isPtrType(t.typ.Type); pt != nil {
-				typs = append(typs, *pt)
-			}
-
-			for _, f := range t.typ.MapOpt {
-				if pt := r.isPtrType(f.Type); pt != nil {
-					typs = append(typs, *pt)
-				}
-			}
-		}
+	for _, t := range r.ptrTypes {
+		typs = append(typs, t)
 	}
 
 	sort.SliceStable(typs, func(i, j int) bool {
 		pi := typs[i].Name
 		pj := typs[j].Name
 
-		return len(pi) < len(pj)
+		return pi < pj
 	})
 
 	return typs
@@ -263,6 +208,30 @@ func (r *SourceGenerator) NewResponseFields(path FieldPath, selectionSet *ast.Se
 	}
 
 	return responseFields
+}
+
+func (r *SourceGenerator) GetNamedType(fullname string) types.Type {
+	if gt := r.GetGenType(fullname); gt != nil {
+		return gt.Type
+	}
+
+	if r.cfg.Models.Exists(fullname) && len(r.cfg.Models[fullname].Model) > 0 {
+		model := r.cfg.Models[fullname].Model[0]
+
+		typ, err := r.binder.FindTypeFromName(model)
+		if err != nil {
+			panic(fmt.Errorf("cannot get type for %v (%v): %w", fullname, model, err))
+		}
+
+		if n, is := typ.(*types.Named); is {
+			return n.Underlying()
+
+		}
+
+		return typ
+	}
+
+	return nil
 }
 
 func (r *SourceGenerator) namedType(path FieldPath, gen func() types.Type) types.Type {
@@ -399,6 +368,45 @@ func (r *SourceGenerator) NewResponseField(path FieldPath, selection ast.Selecti
 	panic("unexpected selection type")
 }
 
+func (r *SourceGenerator) collectPtrTypes(t types.Type, ptr bool) {
+	if r.ptrTypes == nil {
+		r.ptrTypes = map[types.Type]PtrType{}
+	}
+
+	if _, ok := r.ptrTypes[t]; ok {
+		return
+	}
+
+	if p, is := t.(*types.Pointer); is {
+		r.collectPtrTypes(p.Elem(), true)
+	} else if n, is := t.(*types.Named); is {
+		if ptr {
+			r.ptrTypes[n] = PtrType{
+				Name: n.Obj().Name(),
+				Type: n,
+			}
+		}
+
+		t := r.GetNamedType(n.Obj().Name())
+		if t == nil {
+			return
+		}
+
+		if s, is := t.(*types.Struct); is {
+			for i := 0; i < s.NumFields(); i++ {
+				r.collectPtrTypes(s.Field(i).Type(), false)
+			}
+		}
+	} else if b, is := t.(*types.Basic); is {
+		if ptr {
+			r.ptrTypes[b] = PtrType{
+				Name: b.Name(),
+				Type: b,
+			}
+		}
+	}
+}
+
 func (r *SourceGenerator) OperationArguments(variableDefinitions ast.VariableDefinitionList) []*Argument {
 	argumentTypes := make([]*Argument, 0, len(variableDefinitions))
 	for _, v := range variableDefinitions {
@@ -407,6 +415,8 @@ func (r *SourceGenerator) OperationArguments(variableDefinitions ast.VariableDef
 		})
 
 		typ := r.binder.CopyModifiersFromAst(v.Type, baseType)
+
+		r.collectPtrTypes(typ, false)
 
 		argumentTypes = append(argumentTypes, &Argument{
 			Variable: v.Variable,

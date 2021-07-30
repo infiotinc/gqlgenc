@@ -77,6 +77,14 @@ type Message struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+type OptionalValue1 struct {
+	Value *string `json:"value"`
+}
+
+type OptionalValue2 struct {
+	Value *string `json:"value"`
+}
+
 type PostCreateInput struct {
 	Text string `json:"text"`
 }

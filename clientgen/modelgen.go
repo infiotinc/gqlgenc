@@ -31,6 +31,8 @@ func (r *SourceGenerator) genFromDefinition(def *ast.Definition) types.Type {
 				if field.Type.NonNull {
 					genType.MapReq = append(genType.MapReq, f)
 				} else {
+					r.collectPtrTypes(typ, false)
+
 					genType.MapOpt = append(genType.MapOpt, f)
 				}
 			}
