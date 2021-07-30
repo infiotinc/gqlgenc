@@ -15,83 +15,74 @@ type Client struct {
 	Client *client.Client
 }
 
-type RoomFragment struct {
-	Name string "json:\"name\""
-}
-type GetRoom_Room struct {
-	Name string "json:\"name\""
-}
-type GetRoom struct {
-	Room *GetRoom_Room "json:\"room\""
-}
-type GetRoomNonNull_RoomNonNull struct {
-	Name string "json:\"name\""
-}
-type GetRoomNonNull struct {
-	RoomNonNull GetRoomNonNull_RoomNonNull "json:\"roomNonNull\""
-}
-type GetRoomFragment struct {
-	Room *RoomFragment "json:\"room\""
-}
-type GetMedias_Image struct {
-	Size int64 "json:\"size\""
-}
-type GetMedias_Video struct {
-	Duration int64 "json:\"duration\""
-}
-type GetMedias_Medias struct {
-	Typename string           "json:\"__typename\""
-	Image    *GetMedias_Image "json:\"-\""
-	Video    *GetMedias_Video "json:\"-\""
+// OPERATION: CreatePost
+type CreatePost struct {
+	Post CreatePost_Post "json:\"post\""
 }
 
-func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
-	type ΞAlias GetMedias_Medias
-	var r ΞAlias
-
-	err := json.Unmarshal(data, &r)
-	if err != nil {
-		return err
-	}
-
-	*t = GetMedias_Medias(r)
-
-	switch r.Typename {
-	case "Image":
-		var a GetMedias_Image
-		err = json.Unmarshal(data, &a)
-		if err != nil {
-			return err
-		}
-
-		t.Image = &a
-	case "Video":
-		var a GetMedias_Video
-		err = json.Unmarshal(data, &a)
-		if err != nil {
-			return err
-		}
-
-		t.Video = &a
-	}
-
-	return nil
+// OPERATION: CreatePost.post
+type CreatePost_Post struct {
+	ID   string "json:\"id\""
+	Text string "json:\"text\""
 }
 
-type GetMedias struct {
-	Medias []GetMedias_Medias "json:\"medias\""
+// OPERATION: Cyclic1
+type Cyclic1 struct {
+	Cyclic *Cyclic1_Cyclic "json:\"cyclic\""
 }
-type GetBooks_Textbook struct {
-	Courses []string "json:\"courses\""
+
+// OPERATION: Cyclic1.cyclic
+type Cyclic1_Cyclic struct {
+	Child *Cyclic1_Cyclic_Child "json:\"child\""
 }
-type GetBooks_ColoringBook struct {
-	Colors []string "json:\"colors\""
+
+// OPERATION: Cyclic1.cyclic.child
+type Cyclic1_Cyclic_Child struct {
+	Child *Cyclic1_Cyclic_Child_Child "json:\"child\""
 }
+
+// OPERATION: Cyclic1.cyclic.child.child
+type Cyclic1_Cyclic_Child_Child struct {
+	Child *Cyclic1_Cyclic_Child_Child_Child "json:\"child\""
+}
+
+// OPERATION: Cyclic1.cyclic.child.child.child
+type Cyclic1_Cyclic_Child_Child_Child struct {
+	ID string "json:\"id\""
+}
+
+// OBJECT: Cyclic2_1
+type Cyclic2_1 struct {
+	ID    string     "json:\"id\""
+	Child *Cyclic2_2 "json:\"child\""
+}
+
+// OBJECT: Cyclic2_2
+type Cyclic2_2 struct {
+	ID    string     "json:\"id\""
+	Child *Cyclic2_1 "json:\"child\""
+}
+
+// ENUM: Episode
+type Episode string
+
+const (
+	EpisodeNewhope Episode = "NEWHOPE"
+	EpisodeEmpire  Episode = "EMPIRE"
+	EpisodeJedi    Episode = "JEDI"
+)
+
+// OPERATION: GetBooks
+type GetBooks struct {
+	Books []GetBooks_Books "json:\"books\""
+}
+
+// OPERATION: GetBooks.books
 type GetBooks_Books struct {
-	Typename     string                 "json:\"__typename\""
-	Title        string                 "json:\"title\""
-	Textbook     *GetBooks_Textbook     "json:\"-\""
-	ColoringBook *GetBooks_ColoringBook "json:\"-\""
+	Typename     string                       "json:\"__typename\""
+	Title        string                       "json:\"title\""
+	Textbook     *GetBooks_Books_Textbook     "json:\"-\""
+	ColoringBook *GetBooks_Books_ColoringBook "json:\"-\""
 }
 
 func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
@@ -107,7 +98,7 @@ func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
 
 	switch r.Typename {
 	case "ColoringBook":
-		var a GetBooks_ColoringBook
+		var a GetBooks_Books_ColoringBook
 		err = json.Unmarshal(data, &a)
 		if err != nil {
 			return err
@@ -115,7 +106,7 @@ func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
 
 		t.ColoringBook = &a
 	case "Textbook":
-		var a GetBooks_Textbook
+		var a GetBooks_Books_Textbook
 		err = json.Unmarshal(data, &a)
 		if err != nil {
 			return err
@@ -127,58 +118,205 @@ func (t *GetBooks_Books) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type GetBooks struct {
-	Books []GetBooks_Books "json:\"books\""
+// OPERATION: GetBooks.books.ColoringBook
+type GetBooks_Books_ColoringBook struct {
+	Colors []string "json:\"colors\""
 }
-type SubscribeMessageAdded_MessageAdded struct {
+
+// OPERATION: GetBooks.books.Textbook
+type GetBooks_Books_Textbook struct {
+	Courses []string "json:\"courses\""
+}
+
+// OPERATION: GetEpisodes
+type GetEpisodes struct {
+	Episodes []Episode "json:\"episodes\""
+}
+
+// OPERATION: GetMedias
+type GetMedias struct {
+	Medias []GetMedias_Medias "json:\"medias\""
+}
+
+// OPERATION: GetMedias.medias
+type GetMedias_Medias struct {
+	Typename string                  "json:\"__typename\""
+	Image    *GetMedias_Medias_Image "json:\"-\""
+	Video    *GetMedias_Medias_Video "json:\"-\""
+}
+
+func (t *GetMedias_Medias) UnmarshalJSON(data []byte) error {
+	type ΞAlias GetMedias_Medias
+	var r ΞAlias
+
+	err := json.Unmarshal(data, &r)
+	if err != nil {
+		return err
+	}
+
+	*t = GetMedias_Medias(r)
+
+	switch r.Typename {
+	case "Image":
+		var a GetMedias_Medias_Image
+		err = json.Unmarshal(data, &a)
+		if err != nil {
+			return err
+		}
+
+		t.Image = &a
+	case "Video":
+		var a GetMedias_Medias_Video
+		err = json.Unmarshal(data, &a)
+		if err != nil {
+			return err
+		}
+
+		t.Video = &a
+	}
+
+	return nil
+}
+
+// OPERATION: GetMedias.medias.Image
+type GetMedias_Medias_Image struct {
+	Size int64 "json:\"size\""
+}
+
+// OPERATION: GetMedias.medias.Video
+type GetMedias_Medias_Video struct {
+	Duration int64 "json:\"duration\""
+}
+
+// OPERATION: GetRoom
+type GetRoom struct {
+	Room *GetRoom_Room "json:\"room\""
+}
+
+// OPERATION: GetRoom.room
+type GetRoom_Room struct {
+	Name string "json:\"name\""
+}
+
+// OPERATION: GetRoomFragment
+type GetRoomFragment struct {
+	Room *RoomFragment "json:\"room\""
+}
+
+// OPERATION: GetRoomNonNull
+type GetRoomNonNull struct {
+	RoomNonNull GetRoomNonNull_RoomNonNull "json:\"roomNonNull\""
+}
+
+// OPERATION: GetRoomNonNull.roomNonNull
+type GetRoomNonNull_RoomNonNull struct {
+	Name string "json:\"name\""
+}
+
+// OPERATION: Issue8
+type Issue8 struct {
+	Issue8 *Issue8_Issue8 "json:\"issue8\""
+}
+
+// OPERATION: Issue8.issue8
+type Issue8_Issue8 struct {
+	Foo1 Issue8_Issue8_Foo1  "json:\"foo1\""
+	Foo2 *Issue8_Issue8_Foo2 "json:\"foo2\""
+}
+
+// OPERATION: Issue8.issue8.foo1
+type Issue8_Issue8_Foo1 struct {
+	A Issue8_Issue8_Foo1_A "json:\"a\""
+}
+
+// OPERATION: Issue8.issue8.foo1.a
+type Issue8_Issue8_Foo1_A struct {
+	Aa string "json:\"Aa\""
+}
+
+// OPERATION: Issue8.issue8.foo2
+type Issue8_Issue8_Foo2 struct {
+	A Issue8_Issue8_Foo2_A "json:\"a\""
+}
+
+// OPERATION: Issue8.issue8.foo2.a
+type Issue8_Issue8_Foo2_A struct {
+	Aa string "json:\"Aa\""
+}
+
+// INPUT_OBJECT: PostCreateInput
+type PostCreateInput struct {
+	Text string "json:\"text\""
+}
+
+// OBJECT: RoomFragment
+type RoomFragment struct {
+	Name string "json:\"name\""
+}
+
+// OBJECT: SomeExtraType
+type SomeExtraType struct {
+	Child SomeExtraTypeChild "json:\"child\""
+}
+
+// OBJECT: SomeExtraTypeChild
+type SomeExtraTypeChild struct {
+	Child SomeExtraTypeChildChild "json:\"child\""
+}
+
+// OBJECT: SomeExtraTypeChildChild
+type SomeExtraTypeChildChild struct {
 	ID string "json:\"id\""
 }
+
+// OPERATION: SubscribeMessageAdded
 type SubscribeMessageAdded struct {
 	MessageAdded SubscribeMessageAdded_MessageAdded "json:\"messageAdded\""
 }
-type CreatePost_Post struct {
-	ID   string "json:\"id\""
-	Text string "json:\"text\""
+
+// OPERATION: SubscribeMessageAdded.messageAdded
+type SubscribeMessageAdded_MessageAdded struct {
+	ID string "json:\"id\""
 }
-type CreatePost struct {
-	Post CreatePost_Post "json:\"post\""
+
+// OPERATION: UploadFile
+type UploadFile struct {
+	UploadFile UploadFile_UploadFile "json:\"uploadFile\""
 }
-type MyUploadFile_UploadFile struct {
+
+// OPERATION: UploadFile.uploadFile
+type UploadFile_UploadFile struct {
 	Size int64 "json:\"size\""
 }
-type MyUploadFile struct {
-	UploadFile MyUploadFile_UploadFile "json:\"uploadFile\""
+
+// OPERATION: UploadFiles
+type UploadFiles struct {
+	UploadFiles []UploadFiles_UploadFiles "json:\"uploadFiles\""
 }
-type MyUploadFiles_UploadFiles struct {
+
+// OPERATION: UploadFiles.uploadFiles
+type UploadFiles_UploadFiles struct {
 	Size int64 "json:\"size\""
 }
-type MyUploadFiles struct {
-	UploadFiles []MyUploadFiles_UploadFiles "json:\"uploadFiles\""
+
+// OPERATION: UploadFilesMap
+type UploadFilesMap struct {
+	UploadFilesMap UploadFilesMap_UploadFilesMap "json:\"uploadFilesMap\""
 }
-type MyUploadFilesMap_Somefile struct {
+
+// OPERATION: UploadFilesMap.uploadFilesMap
+type UploadFilesMap_UploadFilesMap struct {
+	Somefile UploadFilesMap_UploadFilesMap_Somefile "json:\"somefile\""
+}
+
+// OPERATION: UploadFilesMap.uploadFilesMap.somefile
+type UploadFilesMap_UploadFilesMap_Somefile struct {
 	Size int64 "json:\"size\""
 }
-type MyUploadFilesMap_UploadFilesMap struct {
-	Somefile MyUploadFilesMap_Somefile "json:\"somefile\""
-}
-type MyUploadFilesMap struct {
-	UploadFilesMap MyUploadFilesMap_UploadFilesMap "json:\"uploadFilesMap\""
-}
-type Issue8_A struct {
-	Aa string "json:\"Aa\""
-}
-type Issue8_Foo1 struct {
-	A Issue8_A "json:\"a\""
-}
-type Issue8_Foo2 struct {
-	A Issue8_A "json:\"a\""
-}
-type Issue8_Issue8 struct {
-	Foo1 Issue8_Foo1 "json:\"foo1\""
-	Foo2 Issue8_Foo2 "json:\"foo2\""
-}
-type Issue8 struct {
-	Issue8 *Issue8_Issue8 "json:\"issue8\""
+
+// INPUT_OBJECT: UploadFilesMapInput
+type UploadFilesMapInput struct {
+	Somefile transport.Upload "json:\"somefile\""
 }
 
 const GetRoomDocument = `query GetRoom ($name: String!) {
@@ -407,21 +545,21 @@ func (Ξc *Client) CreatePost(ctх context.Context, input PostCreateInput) (*Cre
 	}
 }
 
-const MyUploadFileDocument = `mutation MyUploadFile ($file: Upload!) {
+const UploadFileDocument = `mutation UploadFile ($file: Upload!) {
 	uploadFile(file: $file) {
 		size
 	}
 }
 `
 
-func (Ξc *Client) MyUploadFile(ctх context.Context, file transport.Upload) (*MyUploadFile, transport.OperationResponse, error) {
+func (Ξc *Client) UploadFile(ctх context.Context, file transport.Upload) (*UploadFile, transport.OperationResponse, error) {
 	Ξvars := map[string]interface{}{
 		"file": file,
 	}
 
 	{
-		var data MyUploadFile
-		res, err := Ξc.Client.Mutation(ctх, "MyUploadFile", MyUploadFileDocument, Ξvars, &data)
+		var data UploadFile
+		res, err := Ξc.Client.Mutation(ctх, "UploadFile", UploadFileDocument, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -430,21 +568,21 @@ func (Ξc *Client) MyUploadFile(ctх context.Context, file transport.Upload) (*M
 	}
 }
 
-const MyUploadFilesDocument = `mutation MyUploadFiles ($files: [Upload!]!) {
+const UploadFilesDocument = `mutation UploadFiles ($files: [Upload!]!) {
 	uploadFiles(files: $files) {
 		size
 	}
 }
 `
 
-func (Ξc *Client) MyUploadFiles(ctх context.Context, files []*transport.Upload) (*MyUploadFiles, transport.OperationResponse, error) {
+func (Ξc *Client) UploadFiles(ctх context.Context, files []*transport.Upload) (*UploadFiles, transport.OperationResponse, error) {
 	Ξvars := map[string]interface{}{
 		"files": files,
 	}
 
 	{
-		var data MyUploadFiles
-		res, err := Ξc.Client.Mutation(ctх, "MyUploadFiles", MyUploadFilesDocument, Ξvars, &data)
+		var data UploadFiles
+		res, err := Ξc.Client.Mutation(ctх, "UploadFiles", UploadFilesDocument, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -453,7 +591,7 @@ func (Ξc *Client) MyUploadFiles(ctх context.Context, files []*transport.Upload
 	}
 }
 
-const MyUploadFilesMapDocument = `mutation MyUploadFilesMap ($files: UploadFilesMapInput!) {
+const UploadFilesMapDocument = `mutation UploadFilesMap ($files: UploadFilesMapInput!) {
 	uploadFilesMap(files: $files) {
 		somefile {
 			size
@@ -462,14 +600,14 @@ const MyUploadFilesMapDocument = `mutation MyUploadFilesMap ($files: UploadFiles
 }
 `
 
-func (Ξc *Client) MyUploadFilesMap(ctх context.Context, files UploadFilesMapInput) (*MyUploadFilesMap, transport.OperationResponse, error) {
+func (Ξc *Client) UploadFilesMap(ctх context.Context, files UploadFilesMapInput) (*UploadFilesMap, transport.OperationResponse, error) {
 	Ξvars := map[string]interface{}{
 		"files": files,
 	}
 
 	{
-		var data MyUploadFilesMap
-		res, err := Ξc.Client.Mutation(ctх, "MyUploadFilesMap", MyUploadFilesMapDocument, Ξvars, &data)
+		var data UploadFilesMap
+		res, err := Ξc.Client.Mutation(ctх, "UploadFilesMap", UploadFilesMapDocument, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}
@@ -500,6 +638,52 @@ func (Ξc *Client) Issue8(ctх context.Context) (*Issue8, transport.OperationRes
 	{
 		var data Issue8
 		res, err := Ξc.Client.Query(ctх, "Issue8", Issue8Document, Ξvars, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
+	}
+}
+
+const GetEpisodesDocument = `query GetEpisodes {
+	episodes
+}
+`
+
+func (Ξc *Client) GetEpisodes(ctх context.Context) (*GetEpisodes, transport.OperationResponse, error) {
+	Ξvars := map[string]interface{}{}
+
+	{
+		var data GetEpisodes
+		res, err := Ξc.Client.Query(ctх, "GetEpisodes", GetEpisodesDocument, Ξvars, &data)
+		if err != nil {
+			return nil, transport.OperationResponse{}, err
+		}
+
+		return &data, res, nil
+	}
+}
+
+const Cyclic1Document = `query Cyclic1 {
+	cyclic {
+		child {
+			child {
+				child {
+					id
+				}
+			}
+		}
+	}
+}
+`
+
+func (Ξc *Client) Cyclic1(ctх context.Context) (*Cyclic1, transport.OperationResponse, error) {
+	Ξvars := map[string]interface{}{}
+
+	{
+		var data Cyclic1
+		res, err := Ξc.Client.Query(ctх, "Cyclic1", Cyclic1Document, Ξvars, &data)
 		if err != nil {
 			return nil, transport.OperationResponse{}, err
 		}

@@ -6,8 +6,40 @@ import (
 	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/vektah/gqlparser/v2/ast"
 	"go/types"
+	"math"
+	"sort"
 	"strings"
 )
+
+type FieldPath struct {
+	Kind ast.DefinitionKind
+	path []string
+}
+
+func NewFieldPath(kind ast.DefinitionKind, name string) FieldPath {
+	return FieldPath{
+		Kind: kind,
+		path: []string{name},
+	}
+}
+
+func (p FieldPath) With(n string) FieldPath {
+	p.path = append(p.path, n)
+	return p
+}
+
+func (p FieldPath) Name() string {
+	pn := make([]string, 0, len(p.path))
+	for _, n := range p.path {
+		pn = append(pn, templates.ToGo(n))
+	}
+
+	return strings.Join(pn, "_")
+}
+
+func (p FieldPath) String() string {
+	return strings.Join(p.path, ".")
+}
 
 type Argument struct {
 	Variable string
@@ -59,6 +91,14 @@ func (r *SourceGenerator) RegisterGenType(name string, typ *Type) {
 		panic(name + ": gen type already defined")
 	}
 
+	if typ.RefType == nil {
+		typ.RefType = types.NewNamed(
+			types.NewTypeName(0, r.client.Pkg(), name, nil),
+			nil,
+			nil,
+		)
+	}
+
 	r.genTypes = append(r.genTypes, genType{
 		name: name,
 		typ:  typ,
@@ -81,6 +121,19 @@ func (r *SourceGenerator) GenTypes() []*Type {
 		typs = append(typs, gt.typ)
 	}
 
+	sort.SliceStable(typs, func(i, j int) bool {
+		pi := typs[i].Path.path
+		pj := typs[j].Path.path
+
+		for n := 0; n < int(math.Min(float64(len(pi)), float64(len(pj)))); n++ {
+			if pi[n] != pj[n] {
+				return pi[n] < pj[n]
+			}
+		}
+
+		return len(pi) < len(pj)
+	})
+
 	return typs
 }
 
@@ -92,7 +145,7 @@ func NewSourceGenerator(cfg *config.Config, client config.PackageConfig) *Source
 	}
 }
 
-func (r *SourceGenerator) NewResponseFields(prefix string, selectionSet *ast.SelectionSet) ResponseFieldList {
+func (r *SourceGenerator) NewResponseFields(path FieldPath, selectionSet *ast.SelectionSet) ResponseFieldList {
 L:
 	for _, field := range *selectionSet {
 		switch field.(type) {
@@ -114,15 +167,15 @@ L:
 
 	responseFields := make(ResponseFieldList, 0, len(*selectionSet))
 	for _, selection := range *selectionSet {
-		rf := r.NewResponseField(prefix, selection)
+		rf := r.NewResponseField(path, selection)
 		responseFields = append(responseFields, rf)
 	}
 
 	return responseFields
 }
 
-func (r *SourceGenerator) namedType(prefix, name string, gen func() types.Type) types.Type {
-	fullname := prefixedName(prefix, name)
+func (r *SourceGenerator) namedType(path FieldPath, gen func() types.Type) types.Type {
+	fullname := path.Name()
 
 	if gt := r.GetGenType(fullname); gt != nil {
 		return gt.RefType
@@ -134,30 +187,28 @@ func (r *SourceGenerator) namedType(prefix, name string, gen func() types.Type) 
 
 		typ, err := r.binder.FindTypeFromName(model)
 		if err != nil {
-			panic(fmt.Errorf("cannot get type for %v: %w", fullname, err))
+			panic(fmt.Errorf("cannot get type for %v (%v): %w", fullname, model, err))
 		}
 
 		return typ
 	} else {
-		r.cfg.Models.Add(
-			fullname,
-			fmt.Sprintf("%s.%s", r.client.ImportPath(), name),
-		)
+		name := fullname
 
-		return gen()
+		genTyp := &Type{
+			Name: name,
+			Path: path,
+		}
+
+		r.RegisterGenType(name, genTyp)
+
+		genTyp.Type = gen()
+
+		return genTyp.RefType
 	}
 }
 
-func prefixedName(prefix, name string) string {
-	if prefix != "" {
-		return prefix + "_" + name
-	}
-
-	return name
-}
-
-func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields ResponseFieldList) types.Type {
-	fullname := prefixedName(prefix, name)
+func (r *SourceGenerator) genFromResponseFields(path FieldPath, fieldsResponseFields ResponseFieldList) types.Type {
+	fullname := path.Name()
 
 	vars := make([]*types.Var, 0, len(fieldsResponseFields))
 	tags := make([]string, 0, len(fieldsResponseFields))
@@ -177,46 +228,40 @@ func (r *SourceGenerator) genStruct(prefix, name string, fieldsResponseFields Re
 		tags = append(tags, strings.Join(field.Tags, " "))
 	}
 
-	typ := types.NewStruct(vars, tags)
+	genType := r.GetGenType(fullname)
+	genType.UnmarshalTypes = unmarshalTypes
 
-	refType := types.NewNamed(
-		types.NewTypeName(0, r.client.Pkg(), fullname, nil),
-		nil,
-		nil,
-	)
-
-	r.RegisterGenType(fullname, &Type{
-		Name:           fullname,
-		Type:           typ,
-		RefType:        refType,
-		UnmarshalTypes: unmarshalTypes,
-	})
-
-	return refType
+	return types.NewStruct(vars, tags)
 }
 
-func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selection) *ResponseField {
+func (r *SourceGenerator) AstTypeToType(path FieldPath, fields ResponseFieldList, typ *ast.Type) types.Type {
+	switch {
+	case fields.IsBasicType():
+		def := r.cfg.Schema.Types[typ.Name()]
+
+		return r.namedType(NewFieldPath(def.Kind, def.Name), func() types.Type {
+			return r.genFromDefinition(def)
+		})
+	case fields.IsFragment():
+		// if a child field is fragment, this field type became fragment.
+		return fields[0].Type
+	case fields.IsStructType():
+		return r.namedType(path, func() types.Type {
+			return r.genFromResponseFields(path, fields)
+		})
+	default:
+		// ここにきたらバグ
+		// here is bug
+		panic("not match type")
+	}
+}
+
+func (r *SourceGenerator) NewResponseField(path FieldPath, selection ast.Selection) *ResponseField {
 	switch selection := selection.(type) {
 	case *ast.Field:
-		fieldsResponseFields := r.NewResponseFields(prefix, &selection.SelectionSet)
-
-		var baseType types.Type
-		switch {
-		case fieldsResponseFields.IsBasicType():
-			baseType = r.Type(selection.Definition.Type.Name())
-		case fieldsResponseFields.IsFragment():
-			// if a child field is fragment, this field type became fragment.
-			baseType = fieldsResponseFields[0].Type
-		case fieldsResponseFields.IsStructType():
-			name := templates.ToGo(selection.Name)
-			baseType = r.namedType(prefix, name, func() types.Type {
-				return r.genStruct(prefix, name, fieldsResponseFields)
-			})
-		default:
-			// ここにきたらバグ
-			// here is bug
-			panic("not match type")
-		}
+		fieldPath := path.With(selection.Name)
+		fieldsResponseFields := r.NewResponseFields(fieldPath, &selection.SelectionSet)
+		baseType := r.AstTypeToType(fieldPath, fieldsResponseFields, selection.Definition.Type)
 
 		// GraphQLの定義がオプショナルのはtypeのポインタ型が返り、配列の定義場合はポインタのスライスの型になって返ってきます
 		// return pointer type then optional type or slice pointer then slice type of definition in GraphQL.
@@ -232,8 +277,12 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 		}
 
 	case *ast.FragmentSpread:
-		fieldsResponseFields := r.NewResponseFields(prefix, &selection.Definition.SelectionSet)
-		typ := r.GetGenType(selection.Definition.Name).RefType
+		fieldsResponseFields := r.NewResponseFields(path, &selection.Definition.SelectionSet)
+
+		name := selection.Definition.Name
+		typ := r.namedType(NewFieldPath(selection.ObjectDefinition.Kind, name), func() types.Type {
+			panic(fmt.Sprintf("fragment %v must already be generated", name))
+		})
 
 		return &ResponseField{
 			Name:             selection.Name,
@@ -244,9 +293,11 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 
 	case *ast.InlineFragment:
 		// InlineFragmentは子要素をそのままstructとしてもつので、ここで、構造体の型を作成します
-		fieldsResponseFields := r.NewResponseFields(prefix, &selection.SelectionSet)
-		typ := r.genStruct(prefix, selection.TypeCondition, fieldsResponseFields)
-
+		path := path.With(selection.TypeCondition)
+		fieldsResponseFields := r.NewResponseFields(path, &selection.SelectionSet)
+		typ := r.namedType(path, func() types.Type {
+			return r.genFromResponseFields(path, fieldsResponseFields)
+		})
 		return &ResponseField{
 			Name:             selection.TypeCondition,
 			Type:             typ,
@@ -262,22 +313,17 @@ func (r *SourceGenerator) NewResponseField(prefix string, selection ast.Selectio
 func (r *SourceGenerator) OperationArguments(variableDefinitions ast.VariableDefinitionList) []*Argument {
 	argumentTypes := make([]*Argument, 0, len(variableDefinitions))
 	for _, v := range variableDefinitions {
+		baseType := r.namedType(NewFieldPath(v.Definition.Kind, v.Definition.Name), func() types.Type {
+			return r.genFromDefinition(v.Definition)
+		})
+
+		typ := r.binder.CopyModifiersFromAst(v.Type, baseType)
+
 		argumentTypes = append(argumentTypes, &Argument{
 			Variable: v.Variable,
-			Type:     r.binder.CopyModifiersFromAst(v.Type, r.Type(v.Type.Name())),
+			Type:     typ,
 		})
 	}
 
 	return argumentTypes
-}
-
-// Typeの引数に渡すtypeNameは解析した結果からselectionなどから求めた型の名前を渡さなければいけない
-func (r *SourceGenerator) Type(typeName string) types.Type {
-	goType, err := r.binder.FindTypeFromName(r.cfg.Models[typeName].Model[0])
-	if err != nil {
-		// 実装として正しいtypeNameを渡していれば必ず見つかるはずなのでpanic
-		panic(fmt.Sprintf("%+v", err))
-	}
-
-	return goType
 }

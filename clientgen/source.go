@@ -3,7 +3,6 @@ package clientgen
 import (
 	"bytes"
 	"fmt"
-	"github.com/99designs/gqlgen/codegen/templates"
 	"github.com/infiotinc/gqlgenc/config"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/formatter"
@@ -36,17 +35,34 @@ type Type struct {
 	Type           types.Type
 	UnmarshalTypes map[string]TypeTarget
 	RefType        *types.Named
+	Consts         []*types.Const
+	Path           FieldPath
 }
 
 func (s *Source) Fragments() error {
 	for _, fragment := range s.queryDocument.Fragments {
-		name := templates.ToGo(fragment.Name)
+		path := NewFieldPath(fragment.Definition.Kind, fragment.Name)
+		_ = s.sourceGenerator.namedType(path, func() types.Type {
+			responseFields := s.sourceGenerator.NewResponseFields(path, &fragment.SelectionSet)
 
-		_ = s.sourceGenerator.namedType("", name, func() types.Type {
-			responseFields := s.sourceGenerator.NewResponseFields(name, &fragment.SelectionSet)
-
-			typ := s.sourceGenerator.genStruct("", name, responseFields)
+			typ := s.sourceGenerator.genFromResponseFields(path, responseFields)
 			return typ
+		})
+	}
+
+	return nil
+}
+
+func (s *Source) ExtraTypes(extraTypes []string) error {
+	for _, t := range extraTypes {
+		def := s.sourceGenerator.cfg.Schema.Types[t]
+
+		if def == nil {
+			panic("type " + t + " does not exist in schema")
+		}
+
+		_ = s.sourceGenerator.namedType(NewFieldPath(def.Kind, def.Name), func() types.Type {
+			return s.sourceGenerator.genFromDefinition(def)
 		})
 	}
 
@@ -120,25 +136,26 @@ type OperationResponse struct {
 	Type      types.Type
 }
 
+const OperationKind ast.DefinitionKind = "OPERATION"
+
 func (s *Source) OperationResponses() ([]*OperationResponse, error) {
 	operationResponses := make([]*OperationResponse, 0, len(s.queryDocument.Operations))
 	for _, operationResponse := range s.queryDocument.Operations {
 		name := getResponseStructName(operationResponse, s.generateConfig)
 
-		opres := &OperationResponse{
-			Operation: operationResponse,
-			Name:      name,
-		}
+		path := NewFieldPath(OperationKind, name)
+		namedType := s.sourceGenerator.namedType(path, func() types.Type {
+			responseFields := s.sourceGenerator.NewResponseFields(path, &operationResponse.SelectionSet)
 
-		namedType := s.sourceGenerator.namedType("", name, func() types.Type {
-			responseFields := s.sourceGenerator.NewResponseFields(name, &operationResponse.SelectionSet)
-
-			typ := s.sourceGenerator.genStruct("", name, responseFields)
+			typ := s.sourceGenerator.genFromResponseFields(path, responseFields)
 			return typ
 		})
-		opres.Type = namedType
 
-		operationResponses = append(operationResponses, opres)
+		operationResponses = append(operationResponses, &OperationResponse{
+			Operation: operationResponse,
+			Name:      name,
+			Type:      namedType,
+		})
 	}
 
 	return operationResponses, nil

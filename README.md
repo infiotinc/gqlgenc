@@ -97,9 +97,6 @@ if err := sub.Err(); err != nil {
 Create a `.gqlgenc.yml` at the root of your module:
 
 ```yaml
-model:
-  package: graph
-  filename: ./graph/gen_models.go
 client:
   package: graph
   filename: ./graph/gen_client.go
@@ -163,7 +160,7 @@ models:
     model: github.com/infiotinc/gqlgenc/client/transport.Upload
 ```
 
-- Enjoy!
+- Profit
 
 ```go
 up := transport.NewUpload(someFile)

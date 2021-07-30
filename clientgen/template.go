@@ -7,14 +7,13 @@ import (
 	"github.com/99designs/gqlgen/codegen/templates"
 )
 
-func RenderTemplate(cfg *config.Config, types []*Type, operations []*Operation, operationResponses []*OperationResponse, generateClient bool, client config.PackageConfig) error {
+func RenderTemplate(cfg *config.Config, types []*Type, operations []*Operation, generateClient bool, client config.PackageConfig) error {
 	if err := templates.Render(templates.Options{
 		PackageName: client.Package,
 		Filename:    client.Filename,
 		Data: map[string]interface{}{
 			"Types":             types,
 			"Operations":        operations,
-			"OperationResponse": operationResponses,
 			"GenerateClient":    generateClient,
 		},
 		Packages:   cfg.Packages,

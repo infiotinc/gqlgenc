@@ -91,6 +91,18 @@ func (r *queryResolver) Issue8(ctx context.Context) (*model.Issue8Payload, error
 	}, nil
 }
 
+func (r *queryResolver) Cyclic(ctx context.Context) (*model.Cyclic1_1, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *queryResolver) Episodes(ctx context.Context) ([]model.Episode, error) {
+	return []model.Episode{
+		model.EpisodeJedi,
+		model.EpisodeNewhope,
+		model.EpisodeEmpire,
+	}, nil
+}
+
 func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error) {
 	ch := make(chan *model.Message)
 	debug, _ := strconv.ParseBool(os.Getenv("GQLGENC_WS_LOG"))

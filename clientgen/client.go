@@ -2,25 +2,26 @@ package clientgen
 
 import (
 	"fmt"
-
-	"github.com/99designs/gqlgen/codegen/config"
+	gqlgenCfg "github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/plugin"
-	gqlgencConfig "github.com/infiotinc/gqlgenc/config"
+	"github.com/infiotinc/gqlgenc/config"
 )
 
 var _ plugin.ConfigMutator = &Plugin{}
 
 type Plugin struct {
 	queryFilePaths []string
-	Client         config.PackageConfig
-	GenerateConfig *gqlgencConfig.GenerateConfig
+	Client         gqlgenCfg.PackageConfig
+	GenerateConfig *config.GenerateConfig
+	ExtraTypes     []string
 }
 
-func New(queryFilePaths []string, client config.PackageConfig, generateConfig *gqlgencConfig.GenerateConfig) *Plugin {
+func New(queryFilePaths []string, client config.Client, generateConfig *config.GenerateConfig) *Plugin {
 	return &Plugin{
 		queryFilePaths: queryFilePaths,
-		Client:         client,
+		Client:         client.PackageConfig,
 		GenerateConfig: generateConfig,
+		ExtraTypes:     client.ExtraTypes,
 	}
 }
 
@@ -28,7 +29,7 @@ func (p *Plugin) Name() string {
 	return "clientgen"
 }
 
-func (p *Plugin) MutateConfig(cfg *config.Config) error {
+func (p *Plugin) MutateConfig(cfg *gqlgenCfg.Config) error {
 	querySources, err := LoadQuerySources(p.queryFilePaths)
 	if err != nil {
 		return fmt.Errorf("load query sources failed: %w", err)
@@ -53,6 +54,11 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 	sourceGenerator := NewSourceGenerator(cfg, p.Client)
 	source := NewSource(cfg.Schema, queryDocument, sourceGenerator, p.GenerateConfig)
 
+	err = source.ExtraTypes(p.ExtraTypes)
+	if err != nil {
+		return fmt.Errorf("generating extra types failed: %w", err)
+	}
+
 	err = source.Fragments()
 	if err != nil {
 		return fmt.Errorf("generating fragment failed: %w", err)
@@ -65,10 +71,10 @@ func (p *Plugin) MutateConfig(cfg *config.Config) error {
 
 	operations := source.Operations(queryDocuments, operationResponses)
 
-	types := sourceGenerator.GenTypes()
+	genTypes := sourceGenerator.GenTypes()
 
 	generateClient := p.GenerateConfig.ShouldGenerateClient()
-	if err := RenderTemplate(cfg, types, operations, operationResponses, generateClient, p.Client); err != nil {
+	if err := RenderTemplate(cfg, genTypes, operations, generateClient, p.Client); err != nil {
 		return fmt.Errorf("template failed: %w", err)
 	}
 
