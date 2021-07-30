@@ -15,6 +15,10 @@ models:
     model: github.com/infiotinc/gqlgenc/client/transport.Upload
   AsMapInput:
     as_map: true
+  Value1:
+    model: example/client.Value1
+  Value2:
+    model: example/client.Value2
 schema:
   - schema.graphql
 query:

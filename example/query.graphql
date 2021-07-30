@@ -116,3 +116,11 @@ query Cyclic1 {
 query AsMap($req: AsMapInput!, $opt: AsMapInput) {
     asMap(req: $req, opt: $opt)
 }
+
+query OptValue1($v: OptionalValue1!) {
+    optValue1(req: $v)
+}
+
+query OptValue2($v: OptionalValue2) {
+    optValue2(opt: $v)
+}

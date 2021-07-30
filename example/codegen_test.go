@@ -412,3 +412,16 @@ func TestGenExtraType(t *testing.T) {
 	_ = client.SomeExtraTypeChild{}
 	_ = client.SomeExtraTypeChildChild{}
 }
+
+func TestGenHelpers(t *testing.T) {
+	t.Parallel()
+
+	// This should fail compiling if the helpers are missing
+	_ = client.StringPtr
+	_ = client.EpisodePtr
+	_ = client.AsMapInputPtr
+
+	_ = client.OptionalValue2Ptr
+	_ = client.Value1Ptr
+	_ = client.Value2Ptr
+}
