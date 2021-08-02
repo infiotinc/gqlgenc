@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"reflect"
+	"strings"
 )
 
 type HttpRequestOption func(req *http.Request)
@@ -43,6 +44,9 @@ func (h *Http) request(gqlreq Request) (*OperationResponse, error) {
 	var req *http.Request
 	if h.UseFormMultipart {
 		req, err = h.formReq(gqlreq, bodyb)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		req, err = http.NewRequestWithContext(gqlreq.Context, "POST", h.URL, bytes.NewReader(bodyb))
 		if err != nil {
@@ -75,6 +79,15 @@ func (h *Http) request(gqlreq Request) (*OperationResponse, error) {
 	return &opres, nil
 }
 
+func (h *Http) jsonFormField(w *multipart.Writer, name string, v interface{}) error {
+	fw, err := w.CreateFormField(name)
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(fw).Encode(v)
+}
+
 func (h *Http) formReq(gqlreq Request, bodyb []byte) (*http.Request, error) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
@@ -103,16 +116,15 @@ func (h *Http) formReq(gqlreq Request, bodyb []byte) (*http.Request, error) {
 		return nil, err
 	}
 
-	mapb, err := json.Marshal(filesMap)
+	err = h.jsonFormField(w, "map", filesMap)
 	if err != nil {
 		return nil, err
 	}
 
-	err = w.WriteField("map", string(mapb))
+	err = w.Close()
 	if err != nil {
 		return nil, err
 	}
-	w.Close()
 
 	req, err := http.NewRequest("POST", h.URL, &b)
 	if err != nil {
@@ -145,11 +157,23 @@ func (h *Http) collectUploads(path string, in interface{}) map[string]Upload {
 		rs := make(map[string]Upload)
 		for i := 0; i < v.NumField(); i++ {
 			f := v.Field(i)
+
 			if !f.CanInterface() {
 				continue // private field
 			}
 
-			k := v.Type().Field(i).Tag.Get("json")
+			ft := v.Type()
+			k := ft.Field(i).Tag.Get("json")
+
+			if strings.Contains(k, ",") {
+				i := strings.Index(k, ",")
+				k = k[:i]
+			}
+
+			if k == "-" {
+				continue
+			}
+
 			p := fmt.Sprintf("%v.%v", path, k)
 			for fk, f := range h.collectUploads(p, f.Interface()) {
 				rs[fk] = f
