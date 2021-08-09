@@ -28,6 +28,7 @@ type ColoringBook implements Book {
 type Chatroom {
     name: String!
     messages: [Message!]!
+    hash: FooType_hash1
 }
 
 type Message {
@@ -146,4 +147,13 @@ input AsMapInput {
 
     reqEp: Episode!
     optEp: Episode
+}
+
+input InputIssue14 {
+    ids: [String!]
+}
+
+enum FooType_hash1 {
+    hash_1
+    hash_2
 }

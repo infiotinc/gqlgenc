@@ -95,6 +95,14 @@ const (
 	EpisodeJedi    Episode = "JEDI"
 )
 
+// ENUM: FooType_hash1
+type FooTypeHash1 string
+
+const (
+	FooTypeHash1Hash1 FooTypeHash1 = "hash_1"
+	FooTypeHash1Hash2 FooTypeHash1 = "hash_2"
+)
+
 // OPERATION: GetBooks
 type GetBooks struct {
 	Books []GetBooks_Books "json:\"books\""
@@ -218,7 +226,8 @@ type GetRoom struct {
 
 // OPERATION: GetRoom.room
 type GetRoom_Room struct {
-	Name string "json:\"name\""
+	Name string        "json:\"name\""
+	Hash *FooTypeHash1 "json:\"hash\""
 }
 
 // OPERATION: GetRoomFragment
@@ -385,6 +394,7 @@ func StringPtr(v string) *string {
 const GetRoomDocument = `query GetRoom ($name: String!) {
 	room(name: $name) {
 		name
+		hash
 	}
 }
 `

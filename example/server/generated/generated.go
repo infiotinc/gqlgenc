@@ -48,6 +48,7 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Chatroom struct {
+		Hash     func(childComplexity int) int
 		Messages func(childComplexity int) int
 		Name     func(childComplexity int) int
 	}
@@ -191,6 +192,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Chatroom.hash":
+		if e.complexity.Chatroom.Hash == nil {
+			break
+		}
+
+		return e.complexity.Chatroom.Hash(childComplexity), true
 
 	case "Chatroom.messages":
 		if e.complexity.Chatroom.Messages == nil {
@@ -661,6 +669,7 @@ type ColoringBook implements Book {
 type Chatroom {
     name: String!
     messages: [Message!]!
+    hash: FooType_hash1
 }
 
 type Message {
@@ -779,6 +788,15 @@ input AsMapInput {
 
     reqEp: Episode!
     optEp: Episode
+}
+
+input InputIssue14 {
+    ids: [String!]
+}
+
+enum FooType_hash1 {
+    hash_1
+    hash_2
 }
 `, BuiltIn: false},
 }
@@ -1068,6 +1086,38 @@ func (ec *executionContext) _Chatroom_messages(ctx context.Context, field graphq
 	res := resTmp.([]*model.Message)
 	fc.Result = res
 	return ec.marshalNMessage2ᚕᚖexampleᚋserverᚋmodelᚐMessageᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Chatroom_hash(ctx context.Context, field graphql.CollectedField, obj *model.Chatroom) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Chatroom",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Hash, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.FooTypeHash1)
+	fc.Result = res
+	return ec.marshalOFooType_hash12ᚖexampleᚋserverᚋmodelᚐFooTypeHash1(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ColoringBook_title(ctx context.Context, field graphql.CollectedField, obj *model.ColoringBook) (ret graphql.Marshaler) {
@@ -3745,6 +3795,26 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputInputIssue14(ctx context.Context, obj interface{}) (model.InputIssue14, error) {
+	var it model.InputIssue14
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "ids":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			it.Ids, err = ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputOptionalValue1(ctx context.Context, obj interface{}) (model.OptionalValue1, error) {
 	var it model.OptionalValue1
 	var asMap = obj.(map[string]interface{})
@@ -3900,6 +3970,8 @@ func (ec *executionContext) _Chatroom(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "hash":
+			out.Values[i] = ec._Chatroom_hash(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5664,6 +5736,22 @@ func (ec *executionContext) marshalOEpisode2ᚖexampleᚋserverᚋmodelᚐEpisod
 	return v
 }
 
+func (ec *executionContext) unmarshalOFooType_hash12ᚖexampleᚋserverᚋmodelᚐFooTypeHash1(ctx context.Context, v interface{}) (*model.FooTypeHash1, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.FooTypeHash1)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOFooType_hash12ᚖexampleᚋserverᚋmodelᚐFooTypeHash1(ctx context.Context, sel ast.SelectionSet, v *model.FooTypeHash1) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
 func (ec *executionContext) marshalOIssue8Payload2ᚖexampleᚋserverᚋmodelᚐIssue8Payload(ctx context.Context, sel ast.SelectionSet, v *model.Issue8Payload) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -5693,6 +5781,42 @@ func (ec *executionContext) unmarshalOString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	return graphql.MarshalString(v)
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {

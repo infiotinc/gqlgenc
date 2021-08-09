@@ -12,7 +12,7 @@ func (r *SourceGenerator) genFromDefinition(def *ast.Definition) types.Type {
 	switch def.Kind {
 	case ast.InputObject:
 		if r.ccfg.Client.InputAsMap || r.ccfg.Models[def.Name].AsMap {
-			genType := r.GetGenType(def.Name)
+			genType := r.GetGenType(NewFieldPath(def.Kind, def.Name).Name())
 
 			for _, field := range def.Fields {
 				fieldDef := r.cfg.Schema.Types[field.Type.Name()]
@@ -73,7 +73,7 @@ func (r *SourceGenerator) genFromDefinition(def *ast.Definition) types.Type {
 		return types.NewStruct(vars, tags)
 
 	case ast.Enum:
-		genType := r.GetGenType(def.Name)
+		genType := r.GetGenType(NewFieldPath(def.Kind, def.Name).Name())
 
 		consts := make([]*types.Const, 0)
 		for _, v := range def.EnumValues {

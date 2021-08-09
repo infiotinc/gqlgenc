@@ -20,8 +20,9 @@ type Media interface {
 }
 
 type Chatroom struct {
-	Name     string     `json:"name"`
-	Messages []*Message `json:"messages"`
+	Name     string        `json:"name"`
+	Messages []*Message    `json:"messages"`
+	Hash     *FooTypeHash1 `json:"hash"`
 }
 
 type ColoringBook struct {
@@ -56,6 +57,10 @@ type Image struct {
 }
 
 func (Image) IsMedia() {}
+
+type InputIssue14 struct {
+	Ids []string `json:"ids"`
+}
 
 type Issue8Payload struct {
 	Foo1 *Issue8PayloadFoo `json:"foo1"`
@@ -166,5 +171,46 @@ func (e *Episode) UnmarshalGQL(v interface{}) error {
 }
 
 func (e Episode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type FooTypeHash1 string
+
+const (
+	FooTypeHash1Hash1 FooTypeHash1 = "hash_1"
+	FooTypeHash1Hash2 FooTypeHash1 = "hash_2"
+)
+
+var AllFooTypeHash1 = []FooTypeHash1{
+	FooTypeHash1Hash1,
+	FooTypeHash1Hash2,
+}
+
+func (e FooTypeHash1) IsValid() bool {
+	switch e {
+	case FooTypeHash1Hash1, FooTypeHash1Hash2:
+		return true
+	}
+	return false
+}
+
+func (e FooTypeHash1) String() string {
+	return string(e)
+}
+
+func (e *FooTypeHash1) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = FooTypeHash1(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid FooType_hash1", str)
+	}
+	return nil
+}
+
+func (e FooTypeHash1) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
