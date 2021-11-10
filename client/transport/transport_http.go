@@ -76,6 +76,10 @@ func (h *Http) request(gqlreq Request) (*OperationResponse, error) {
 		return nil, err
 	}
 
+	if len(opres.Data) == 0 && len(opres.Errors) == 0 {
+		return nil, fmt.Errorf("no data nor errors, got %v: %.1000s", res.StatusCode, data)
+	}
+
 	return &opres, nil
 }
 

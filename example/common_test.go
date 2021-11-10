@@ -63,6 +63,12 @@ func httptr(ctx context.Context, u string) *transport.Http {
 }
 
 func clifactory(ctx context.Context, trf func(server *httptest.Server) (transport.Transport, func())) (*client.Client, func()) {
+	return clifactorywith(ctx, trf, func(h http.Handler) http.Handler {
+		return h
+	})
+}
+
+func clifactorywith(ctx context.Context, trf func(server *httptest.Server) (transport.Transport, func()), hw func(http.Handler) http.Handler) (*client.Client, func()) {
 	h := handler.New(generated.NewExecutableSchema(generated.Config{
 		Resolvers: &server.Resolver{},
 	}))
@@ -97,7 +103,7 @@ func clifactory(ctx context.Context, trf func(server *httptest.Server) (transpor
 
 	srv := http.NewServeMux()
 	srv.Handle("/playground", playground.Handler("Playground", "/"))
-	srv.Handle("/", h)
+	srv.Handle("/", hw(h))
 
 	ts := httptest.NewServer(srv)
 
