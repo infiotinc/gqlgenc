@@ -5,15 +5,16 @@ package config
 import (
 	"context"
 	"fmt"
-	"github.com/infiotinc/gqlgenc/client"
-	"github.com/infiotinc/gqlgenc/client/transport"
-	"github.com/infiotinc/gqlgenc/introspection"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/infiotinc/gqlgenc/client"
+	"github.com/infiotinc/gqlgenc/client/transport"
+	"github.com/infiotinc/gqlgenc/introspection"
 
 	"github.com/99designs/gqlgen/codegen/config"
 	"github.com/vektah/gqlparser/v2"
@@ -218,7 +219,7 @@ func LoadConfig(filename string) (*Config, error) {
 	cfg.GQLConfig = &config.Config{
 		Models: models,
 		// TODO: gqlgen must be set exec but client not used
-		Exec:       config.PackageConfig{Filename: "generated.go"},
+		Exec:       config.ExecConfig{Filename: "generated.go"},
 		Directives: map[string]config.DirectiveConfig{},
 		Sources:    sources,
 	}
