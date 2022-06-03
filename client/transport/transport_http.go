@@ -92,15 +92,40 @@ func (h *Http) jsonFormField(w *multipart.Writer, name string, v interface{}) er
 	return json.NewEncoder(fw).Encode(v)
 }
 
+func (h *Http) uploadKey(i int) string {
+	return fmt.Sprintf("%v", i)
+}
+
 func (h *Http) formReq(gqlreq Request, bodyb []byte) (*http.Request, error) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 
 	filesMap := make(map[string][]string)
 
+	uploads := h.collectUploads("variables", gqlreq.Variables)
+
+	err := w.WriteField("operations", string(bodyb))
+	if err != nil {
+		return nil, err
+	}
+
+	// https://github.com/99designs/gqlgen/issues/2222
 	i := 0
-	for p, f := range h.collectUploads("variables", gqlreq.Variables) {
-		k := fmt.Sprintf("%v", i)
+	for p := range uploads {
+		k := h.uploadKey(i)
+
+		filesMap[k] = []string{p}
+		i++
+	}
+
+	err = h.jsonFormField(w, "map", filesMap)
+	if err != nil {
+		return nil, err
+	}
+
+	i = 0
+	for _, f := range uploads {
+		k := h.uploadKey(i)
 		fw, err := w.CreateFormFile(k, f.Name)
 		if err != nil {
 			return nil, err
@@ -110,19 +135,6 @@ func (h *Http) formReq(gqlreq Request, bodyb []byte) (*http.Request, error) {
 		if _, err := io.Copy(fw, f.File); err != nil {
 			return nil, err
 		}
-
-		filesMap[k] = []string{p}
-		i++
-	}
-
-	err := w.WriteField("operations", string(bodyb))
-	if err != nil {
-		return nil, err
-	}
-
-	err = h.jsonFormField(w, "map", filesMap)
-	if err != nil {
-		return nil, err
 	}
 
 	err = w.Close()
