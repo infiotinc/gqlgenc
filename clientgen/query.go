@@ -2,6 +2,7 @@ package clientgen
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/parser"
@@ -69,6 +70,10 @@ func fragmentsUnique(fragments ast.FragmentDefinitionList) ast.FragmentDefinitio
 	for _, fragment := range uniqueMap {
 		uniqueFragments = append(uniqueFragments, fragment)
 	}
+
+	sort.SliceStable(uniqueFragments, func(i, j int) bool {
+		return uniqueFragments[i].Name < uniqueFragments[j].Name
+	})
 
 	return uniqueFragments
 }
