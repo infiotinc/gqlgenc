@@ -58,3 +58,21 @@ func TestRawHttpError(t *testing.T) {
 	_, err := cli.Query(ctx, "", RoomQuery, map[string]interface{}{"name": "name"}, &opres)
 	assert.EqualError(t, err, `no data nor errors, got 403: {"error":"Yeah that went wrong"}`)
 }
+
+func TestRandomResponseHttpError(t *testing.T) {
+	ctx := context.Background()
+
+	cli, teardown := clifactorywith(ctx, func(ts *httptest.Server) (transport.Transport, func()) {
+		return httptr(ctx, ts.URL), nil
+	}, func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("Yeah that went wrong too"))
+		})
+	})
+	defer teardown()
+
+	var opres RoomQueryResponse
+	_, err := cli.Query(ctx, "", RoomQuery, map[string]interface{}{"name": "name"}, &opres)
+	assert.EqualError(t, err, `unmarshal, got 403: invalid character 'Y' looking for beginning of value: Yeah that went wrong too`)
+}

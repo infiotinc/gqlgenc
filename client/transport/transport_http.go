@@ -73,7 +73,7 @@ func (h *Http) request(gqlreq Request) (*OperationResponse, error) {
 	var opres OperationResponse
 	err = json.Unmarshal(data, &opres)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal, got %v: %w: %.1000s", res.StatusCode, err, data)
 	}
 
 	if len(opres.Data) == 0 && len(opres.Errors) == 0 {
