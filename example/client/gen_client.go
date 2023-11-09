@@ -11,6 +11,28 @@ import (
 	"github.com/infiotinc/gqlgenc/client/transport"
 )
 
+type IClient interface {
+	GetRoom(ctх context.Context, name string) (*GetRoom, transport.OperationResponse, error)
+	GetRoomNonNull(ctх context.Context, name string) (*GetRoomNonNull, transport.OperationResponse, error)
+	GetRoomFragment(ctх context.Context, name string) (*GetRoomFragment, transport.OperationResponse, error)
+	GetRoomCustom(ctх context.Context, name string) (*somelib.CustomRoom, transport.OperationResponse, error)
+	GetMedias(ctх context.Context) (*GetMedias, transport.OperationResponse, error)
+	GetBooks(ctх context.Context) (*GetBooks, transport.OperationResponse, error)
+	SubscribeMessageAdded(ctх context.Context) (<-chan MessageSubscribeMessageAdded, func())
+	CreatePost(ctх context.Context, input PostCreateInput) (*CreatePost, transport.OperationResponse, error)
+	UploadFile(ctх context.Context, file transport.Upload) (*UploadFile, transport.OperationResponse, error)
+	UploadFiles(ctх context.Context, files []*transport.Upload) (*UploadFiles, transport.OperationResponse, error)
+	UploadFilesMap(ctх context.Context, files UploadFilesMapInput) (*UploadFilesMap, transport.OperationResponse, error)
+	Issue8(ctх context.Context) (*Issue8, transport.OperationResponse, error)
+	GetEpisodes(ctх context.Context) (*GetEpisodes, transport.OperationResponse, error)
+	Cyclic1(ctх context.Context) (*Cyclic1, transport.OperationResponse, error)
+	AsMap(ctх context.Context, req AsMapInput, opt *AsMapInput) (*AsMap, transport.OperationResponse, error)
+	OptValue1(ctх context.Context, v OptionalValue1) (*OptValue1, transport.OperationResponse, error)
+	OptValue2(ctх context.Context, v *OptionalValue2) (*OptValue2, transport.OperationResponse, error)
+}
+
+var _ IClient = (*Client)(nil)
+
 type Client struct {
 	Client *client.Client
 }

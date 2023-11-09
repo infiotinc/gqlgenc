@@ -2,6 +2,7 @@ package clientgen
 
 import (
 	"fmt"
+
 	gqlgenCfg "github.com/99designs/gqlgen/codegen/config"
 	"github.com/99designs/gqlgen/plugin"
 	"github.com/infiotinc/gqlgenc/config"
@@ -75,7 +76,8 @@ func (p *Plugin) MutateConfig(cfg *gqlgenCfg.Config) error {
 	ptrTypes := sourceGenerator.PtrTypes()
 
 	generateClient := p.GenerateConfig.ShouldGenerateClient()
-	if err := RenderTemplate(cfg, genTypes, ptrTypes, operations, generateClient, p.Client); err != nil {
+	generateInterface := p.GenerateConfig.ShouldGenerateInterface()
+	if err := RenderTemplate(cfg, genTypes, ptrTypes, operations, generateClient, generateInterface, p.Client); err != nil {
 		return fmt.Errorf("template failed: %w", err)
 	}
 

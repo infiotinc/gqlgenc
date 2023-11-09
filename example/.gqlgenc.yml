@@ -23,3 +23,5 @@ schema:
   - schema.graphql
 query:
   - query.graphql
+generate:
+  generate_interface: true
