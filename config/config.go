@@ -301,12 +301,17 @@ func (c *Config) loadLocalSchema() (*ast.Schema, error) {
 }
 
 type GenerateConfig struct {
-	Prefix *NamingConfig `yaml:"prefix,omitempty"`
-	Suffix *NamingConfig `yaml:"suffix,omitempty"`
+	Prefix            *NamingConfig `yaml:"prefix,omitempty"`
+	Suffix            *NamingConfig `yaml:"suffix,omitempty"`
+	GenerateInterface bool          `yaml:"generate_interface,omitempty"`
 }
 
 func (c *GenerateConfig) ShouldGenerateClient() bool {
 	return true
+}
+
+func (c *GenerateConfig) ShouldGenerateInterface() bool {
+	return c != nil && c.GenerateInterface
 }
 
 type NamingConfig struct {

@@ -1,3 +1,16 @@
+{{- if .GenerateInterface }}
+type IClient interface {
+    {{- range $op := .Operations }}
+        {{- if eq $op.OperationType "subscription" }}
+            {{ $op.Name|go }} (ctх context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (<-chan Message{{ $op.Name|go }}, func())
+        {{- else }}
+        {{ $op.Name|go }} (ctх context.Context{{- range $arg := .Args }}, {{ $arg.Variable | goPrivate }} {{ $arg.Type | ref }} {{- end }}) (*{{ $op.ResponseType | ref }}, transport.OperationResponse, error)
+        {{- end }}
+    {{- end }}
+}
+var _ IClient = (*Client)(nil)
+{{- end }}
+
 {{- if .GenerateClient }}
 	{{ reserveImport "bytes" }}
 	{{ reserveImport "context" }}
