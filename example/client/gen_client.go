@@ -76,13 +76,13 @@ type Cyclic1_Cyclic_Child_Child_Child struct {
 
 // OBJECT: Cyclic2_1
 type Cyclic2_1 struct {
-	ID    string     "json:\"id\""
+	ID    string     "json:\"id,omitempty\""
 	Child *Cyclic2_2 "json:\"child\""
 }
 
 // OBJECT: Cyclic2_2
 type Cyclic2_2 struct {
-	ID    string     "json:\"id\""
+	ID    string     "json:\"id,omitempty\""
 	Child *Cyclic2_1 "json:\"child\""
 }
 
@@ -298,7 +298,7 @@ type OptionalValue2 struct {
 
 // INPUT_OBJECT: PostCreateInput
 type PostCreateInput struct {
-	Text string "json:\"text\""
+	Text string "json:\"text,omitempty\""
 }
 
 // OBJECT: RoomFragment
@@ -308,17 +308,17 @@ type RoomFragment struct {
 
 // OBJECT: SomeExtraType
 type SomeExtraType struct {
-	Child SomeExtraTypeChild "json:\"child\""
+	Child SomeExtraTypeChild "json:\"child,omitempty\""
 }
 
 // OBJECT: SomeExtraTypeChild
 type SomeExtraTypeChild struct {
-	Child SomeExtraTypeChildChild "json:\"child\""
+	Child SomeExtraTypeChildChild "json:\"child,omitempty\""
 }
 
 // OBJECT: SomeExtraTypeChildChild
 type SomeExtraTypeChildChild struct {
-	ID string "json:\"id\""
+	ID string "json:\"id,omitempty\""
 }
 
 // OPERATION: SubscribeMessageAdded
@@ -368,7 +368,7 @@ type UploadFilesMap_UploadFilesMap_Somefile struct {
 
 // INPUT_OBJECT: UploadFilesMapInput
 type UploadFilesMapInput struct {
-	Somefile transport.Upload "json:\"somefile\""
+	Somefile transport.Upload "json:\"somefile,omitempty\""
 }
 
 // Pointer helpers

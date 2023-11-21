@@ -67,7 +67,11 @@ func (r *SourceGenerator) genFromDefinition(def *ast.Definition) types.Type {
 			}
 
 			vars = append(vars, types.NewVar(0, nil, templates.ToGo(name), typ))
-			tags = append(tags, `json:"`+name+`"`)
+			if field.Type.NonNull {
+				tags = append(tags, fmt.Sprintf(`json:"%v,omitempty"`, name))
+			} else {
+				tags = append(tags, fmt.Sprintf(`json:"%v"`, name))
+			}
 		}
 
 		return types.NewStruct(vars, tags)
